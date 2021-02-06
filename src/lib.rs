@@ -41,8 +41,9 @@ mod tests {
 
         let options = Options::new(30_000);
         let actual: Vec<&str> = word_wrap
-            .wrap("this is a test of the word wrap", options)
+            .wrap("this is a test \n of the word wrap", options)
             .collect();
+
         let expected = vec!["this is a test", "of the word wrap"];
 
         assert_eq!(expected, actual);

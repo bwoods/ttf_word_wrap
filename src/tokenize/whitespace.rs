@@ -29,20 +29,49 @@ impl<'a> WhiteSpaceIterator<'a> {
     }
 }
 
+#[derive(Copy, Clone, PartialEq)]
+enum State {
+    Newline,
+    WhiteSpace,
+    Other,
+}
+
+impl From<&char> for State {
+    fn from(ch: &char) -> Self {
+        if ch == &'\r' || ch == &'\n' {
+            State::Newline
+        } else if ch.is_whitespace() {
+            State::WhiteSpace
+        } else {
+            State::Other
+        }
+    }
+}
+
+impl From<State> for TokenKind {
+    fn from(state: State) -> Self {
+        match state {
+            State::Newline => TokenKind::Newline,
+            State::WhiteSpace => TokenKind::Optional,
+            State::Other => TokenKind::Required,
+        }
+    }
+}
+
 impl<'a> Iterator for WhiteSpaceIterator<'a> {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
         // Get the 'mode' for the next `Span` whitespace or not
         // will return None if there is no more text
-        let mode = self.chars.peek()?.is_whitespace();
+        let state = State::from(self.chars.peek()?);
 
         // keep track of the start of the span
         let start = self.index;
         let mut end = self.index;
 
         while let Some(ch) = self.chars.peek() {
-            if mode != ch.is_whitespace() {
+            if state != State::from(ch) {
                 break;
             }
 
@@ -53,15 +82,141 @@ impl<'a> Iterator for WhiteSpaceIterator<'a> {
             end += ch.len_utf8();
         }
 
-        let span = Span::new(start, end);
-        let kind = if mode {
-            TokenKind::Optional
-        } else {
-            TokenKind::Required
-        };
+        // Done scanning, prep for the next token
+        self.index = end;
 
-        self.index = end + 1;
+        let kind = TokenKind::from(state);
+        let span = Span::new(start, end);
 
         Some(Token { span, kind })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn one_word() {
+        let mut iter = WhiteSpaceIterator::new("word");
+        assert!(matches!(
+            iter.next(),
+            Some(Token {
+                kind: TokenKind::Required,
+                span: Span { start: 0, end: 4 }
+            })
+        ));
+    }
+
+    #[test]
+    fn begin_rn() {
+        let mut iter = WhiteSpaceIterator::new("\r\na\n");
+        assert!(matches!(
+            iter.next(),
+            Some(Token {
+                kind: TokenKind::Newline,
+                span: Span { start: 0, end: 2 }
+            })
+        ));
+        assert!(matches!(
+            iter.next(),
+            Some(Token {
+                kind: TokenKind::Required,
+                span: Span { start: 2, end: 3 }
+            })
+        ));
+        assert!(matches!(
+            iter.next(),
+            Some(Token {
+                kind: TokenKind::Newline,
+                span: Span { start: 3, end: 4 }
+            })
+        ));
+    }
+
+    #[test]
+    fn newline_breaks_ws() {
+        let mut iter = WhiteSpaceIterator::new("  \n  ");
+        assert!(matches!(
+            iter.next(),
+            Some(Token {
+                kind: TokenKind::Optional,
+                span: Span { start: 0, end: 2 }
+            })
+        ));
+        assert!(matches!(
+            iter.next(),
+            Some(Token {
+                kind: TokenKind::Newline,
+                span: Span { start: 2, end: 3 }
+            })
+        ));
+        assert!(matches!(
+            iter.next(),
+            Some(Token {
+                kind: TokenKind::Optional,
+                span: Span { start: 3, end: 5 }
+            })
+        ));
+    }
+    #[test]
+    fn mixed() {
+        let mut iter = WhiteSpaceIterator::new("at newline\n  some thing");
+        assert!(matches!(
+            iter.next(),
+            Some(Token {
+                kind: TokenKind::Required,
+                span: Span { start: 0, end: 2 }
+            })
+        ));
+        assert!(matches!(
+            iter.next(),
+            Some(Token {
+                kind: TokenKind::Optional,
+                span: Span { start: 2, end: 3 }
+            })
+        ));
+        assert!(matches!(
+            iter.next(),
+            Some(Token {
+                kind: TokenKind::Required,
+                span: Span { start: 3, end: 10 }
+            })
+        ));
+        assert!(matches!(
+            iter.next(),
+            Some(Token {
+                kind: TokenKind::Newline,
+                span: Span { start: 10, end: 11 }
+            })
+        ));
+        assert!(matches!(
+            iter.next(),
+            Some(Token {
+                kind: TokenKind::Optional,
+                span: Span { start: 11, end: 13 }
+            })
+        ));
+        assert!(matches!(
+            iter.next(),
+            Some(Token {
+                kind: TokenKind::Required,
+                span: Span { start: 13, end: 17 }
+            })
+        ));
+        assert!(matches!(
+            iter.next(),
+            Some(Token {
+                kind: TokenKind::Optional,
+                span: Span { start: 17, end: 18 }
+            })
+        ));
+        assert!(matches!(
+            iter.next(),
+            Some(Token {
+                kind: TokenKind::Required,
+                span: Span { start: 18, end: 23 }
+            })
+        ));
     }
 }

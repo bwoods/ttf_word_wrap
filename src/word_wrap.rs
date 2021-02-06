@@ -1,7 +1,4 @@
-use crate::{
-    tokenize::{span::Span, Token},
-    LineIterator, Options,
-};
+use crate::{LineIterator, Options};
 
 use ttf_parser::Face;
 
@@ -22,12 +19,6 @@ impl<'a> WordWrap<'a> {
     /// Returns a `LineIterator` that provides the wrapped lines as `&str`.
     pub fn wrap<'b>(&mut self, text: &'b str, mut options: Options) -> LineIterator<'b> {
         let tokens = options.tokenizer().tokenize(text);
-        let spans: Vec<Span> = Default::default();
-
-        let debug: Vec<Token> = tokens.collect();
-
-        dbg!(debug);
-
-        LineIterator::new(text, spans)
+        LineIterator::new(text, options, tokens)
     }
 }
