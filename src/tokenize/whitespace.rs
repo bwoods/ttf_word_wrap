@@ -12,7 +12,7 @@ impl WhiteSpaceTokenizer {
 }
 
 impl Tokenizer for WhiteSpaceTokenizer {
-    fn tokenize<'a>(&mut self, text: &'a str) -> Box<dyn Iterator<Item = Token> + 'a> {
+    fn tokenize<'a>(&self, text: &'a str) -> Box<dyn Iterator<Item = Token> + 'a> {
         Box::new(WhiteSpaceIterator::new(text))
     }
 }

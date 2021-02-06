@@ -6,7 +6,7 @@ pub mod whitespace;
 //pub type Tokenizer<'a> = dyn Fn(&'a str) -> Box<dyn Iterator<Item = Token> + 'a>;
 
 pub trait Tokenizer: std::fmt::Debug {
-    fn tokenize<'a>(&mut self, text: &'a str) -> Box<dyn Iterator<Item = Token> + 'a>;
+    fn tokenize<'a>(&self, text: &'a str) -> Box<dyn Iterator<Item = Token> + 'a>;
 }
 
 #[derive(PartialEq, Clone, Debug)]

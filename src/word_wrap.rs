@@ -1,4 +1,4 @@
-use crate::{LineIterator, Options};
+use crate::{line_builder::LineBuilder, DefaultLineIterator, Options};
 
 use ttf_parser::Face;
 
@@ -17,8 +17,13 @@ impl<'a> WordWrap<'a> {
     /// Wraps the given text based on the `options` provided.
     ///
     /// Returns a `LineIterator` that provides the wrapped lines as `&str`.
-    pub fn wrap<'b>(&mut self, text: &'b str, mut options: Options) -> LineIterator<'b> {
+    pub fn wrap<'b: 'a>(
+        &'a self,
+        text: &'b str,
+        mut options: Options,
+    ) -> Box<dyn Iterator<Item = &'a str> + 'a> {
         let tokens = options.tokenizer().tokenize(text);
-        LineIterator::new(text, options, tokens)
+        let iterator = options.line_builder().build(text, tokens);
+        iterator
     }
 }

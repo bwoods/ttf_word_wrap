@@ -4,12 +4,12 @@
 #![doc(test(attr(deny(rust_2018_idioms, warnings))))]
 #![doc(test(attr(allow(unused_extern_crates, unused_variables))))]
 
-mod line_iterator;
+mod line_builder;
 mod options;
 mod tokenize;
 mod word_wrap;
 
-pub use line_iterator::LineIterator;
+pub use line_builder::DefaultLineIterator;
 pub use options::Options;
 pub use word_wrap::WordWrap;
 
@@ -39,7 +39,7 @@ mod tests {
 
         let mut word_wrap = WordWrap::new(font_face);
 
-        let options = Options::new(30_000);
+        let options = Options::builder(30_000).build();
         let actual: Vec<&str> = word_wrap
             .wrap("this is a test \n of the word wrap", options)
             .collect();
