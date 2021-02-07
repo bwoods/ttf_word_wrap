@@ -1,6 +1,6 @@
-use std::{iter::Peekable, str::Chars};
+use std::{iter::Peekable, ops::Range, str::Chars};
 
-use super::{span::Span, Token, TokenKind, Tokenizer};
+use super::{Token, TokenKind, Tokenizer};
 
 #[derive(Debug, Default)]
 pub struct WhiteSpaceTokenizer {}
@@ -86,7 +86,7 @@ impl<'a> Iterator for WhiteSpaceIterator<'a> {
         self.index = end;
 
         let kind = TokenKind::from(state);
-        let span = Span::new(start, end);
+        let span = Range { start, end };
 
         Some(Token { span, kind })
     }
@@ -94,6 +94,8 @@ impl<'a> Iterator for WhiteSpaceIterator<'a> {
 
 #[cfg(test)]
 mod tests {
+    use std::ops::Range;
+
     use super::*;
 
     #[test]
@@ -103,7 +105,7 @@ mod tests {
             iter.next(),
             Some(Token {
                 kind: TokenKind::Required,
-                span: Span { start: 0, end: 4 }
+                span: Range { start: 0, end: 4 }
             })
         ));
     }
@@ -115,21 +117,21 @@ mod tests {
             iter.next(),
             Some(Token {
                 kind: TokenKind::Newline,
-                span: Span { start: 0, end: 2 }
+                span: Range { start: 0, end: 2 }
             })
         ));
         assert!(matches!(
             iter.next(),
             Some(Token {
                 kind: TokenKind::Required,
-                span: Span { start: 2, end: 3 }
+                span: Range { start: 2, end: 3 }
             })
         ));
         assert!(matches!(
             iter.next(),
             Some(Token {
                 kind: TokenKind::Newline,
-                span: Span { start: 3, end: 4 }
+                span: Range { start: 3, end: 4 }
             })
         ));
     }
@@ -141,21 +143,21 @@ mod tests {
             iter.next(),
             Some(Token {
                 kind: TokenKind::Optional,
-                span: Span { start: 0, end: 2 }
+                span: Range { start: 0, end: 2 }
             })
         ));
         assert!(matches!(
             iter.next(),
             Some(Token {
                 kind: TokenKind::Newline,
-                span: Span { start: 2, end: 3 }
+                span: Range { start: 2, end: 3 }
             })
         ));
         assert!(matches!(
             iter.next(),
             Some(Token {
                 kind: TokenKind::Optional,
-                span: Span { start: 3, end: 5 }
+                span: Range { start: 3, end: 5 }
             })
         ));
     }
@@ -166,56 +168,56 @@ mod tests {
             iter.next(),
             Some(Token {
                 kind: TokenKind::Required,
-                span: Span { start: 0, end: 2 }
+                span: Range { start: 0, end: 2 }
             })
         ));
         assert!(matches!(
             iter.next(),
             Some(Token {
                 kind: TokenKind::Optional,
-                span: Span { start: 2, end: 3 }
+                span: Range { start: 2, end: 3 }
             })
         ));
         assert!(matches!(
             iter.next(),
             Some(Token {
                 kind: TokenKind::Required,
-                span: Span { start: 3, end: 10 }
+                span: Range { start: 3, end: 10 }
             })
         ));
         assert!(matches!(
             iter.next(),
             Some(Token {
                 kind: TokenKind::Newline,
-                span: Span { start: 10, end: 11 }
+                span: Range { start: 10, end: 11 }
             })
         ));
         assert!(matches!(
             iter.next(),
             Some(Token {
                 kind: TokenKind::Optional,
-                span: Span { start: 11, end: 13 }
+                span: Range { start: 11, end: 13 }
             })
         ));
         assert!(matches!(
             iter.next(),
             Some(Token {
                 kind: TokenKind::Required,
-                span: Span { start: 13, end: 17 }
+                span: Range { start: 13, end: 17 }
             })
         ));
         assert!(matches!(
             iter.next(),
             Some(Token {
                 kind: TokenKind::Optional,
-                span: Span { start: 17, end: 18 }
+                span: Range { start: 17, end: 18 }
             })
         ));
         assert!(matches!(
             iter.next(),
             Some(Token {
                 kind: TokenKind::Required,
-                span: Span { start: 18, end: 23 }
+                span: Range { start: 18, end: 23 }
             })
         ));
     }

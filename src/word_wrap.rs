@@ -22,8 +22,9 @@ impl<'a> WordWrap<'a> {
         text: &'b str,
         mut options: Options,
     ) -> Box<dyn Iterator<Item = &'a str> + 'a> {
+        let max_width = options.max_width();
         let tokens = options.tokenizer().tokenize(text);
-        let iterator = options.line_builder().build(text, tokens);
+        let iterator = options.line_builder().build(max_width, text, tokens);
         iterator
     }
 }

@@ -1,6 +1,5 @@
-use self::span::Span;
+use std::ops::Range;
 
-pub mod span;
 pub mod whitespace;
 
 //pub type Tokenizer<'a> = dyn Fn(&'a str) -> Box<dyn Iterator<Item = Token> + 'a>;
@@ -24,5 +23,5 @@ pub enum TokenKind {
 #[derive(Clone, Debug)]
 pub struct Token {
     pub kind: TokenKind,
-    pub span: Span,
+    pub span: Range<usize>,
 }

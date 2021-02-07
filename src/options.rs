@@ -25,6 +25,10 @@ impl Options {
         }
     }
 
+    pub fn max_width(&self) -> u32 {
+        self.max_width
+    }
+
     /// The `Tokenizer`
     pub fn tokenizer(&mut self) -> &mut dyn Tokenizer {
         self.tokenizer.as_mut()
