@@ -100,6 +100,6 @@ impl<'a> Iterator for DefaultLineIterator<'a> {
             */
         }
 
-        Some(&self.text[first.span.start..last.span.end])
+        Some(&self.text[first.range.start..last.range.end])
     }
 }

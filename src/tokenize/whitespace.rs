@@ -86,9 +86,9 @@ impl<'a> Iterator for WhiteSpaceIterator<'a> {
         self.index = end;
 
         let kind = TokenKind::from(state);
-        let span = Range { start, end };
+        let range = Range { start, end };
 
-        Some(Token { span, kind })
+        Some(Token { range, kind })
     }
 }
 
@@ -105,7 +105,7 @@ mod tests {
             iter.next(),
             Some(Token {
                 kind: TokenKind::Required,
-                span: Range { start: 0, end: 4 }
+                range: Range { start: 0, end: 4 }
             })
         ));
     }
@@ -117,21 +117,21 @@ mod tests {
             iter.next(),
             Some(Token {
                 kind: TokenKind::Newline,
-                span: Range { start: 0, end: 2 }
+                range: Range { start: 0, end: 2 }
             })
         ));
         assert!(matches!(
             iter.next(),
             Some(Token {
                 kind: TokenKind::Required,
-                span: Range { start: 2, end: 3 }
+                range: Range { start: 2, end: 3 }
             })
         ));
         assert!(matches!(
             iter.next(),
             Some(Token {
                 kind: TokenKind::Newline,
-                span: Range { start: 3, end: 4 }
+                range: Range { start: 3, end: 4 }
             })
         ));
     }
@@ -143,21 +143,21 @@ mod tests {
             iter.next(),
             Some(Token {
                 kind: TokenKind::Optional,
-                span: Range { start: 0, end: 2 }
+                range: Range { start: 0, end: 2 }
             })
         ));
         assert!(matches!(
             iter.next(),
             Some(Token {
                 kind: TokenKind::Newline,
-                span: Range { start: 2, end: 3 }
+                range: Range { start: 2, end: 3 }
             })
         ));
         assert!(matches!(
             iter.next(),
             Some(Token {
                 kind: TokenKind::Optional,
-                span: Range { start: 3, end: 5 }
+                range: Range { start: 3, end: 5 }
             })
         ));
     }
@@ -168,56 +168,56 @@ mod tests {
             iter.next(),
             Some(Token {
                 kind: TokenKind::Required,
-                span: Range { start: 0, end: 2 }
+                range: Range { start: 0, end: 2 }
             })
         ));
         assert!(matches!(
             iter.next(),
             Some(Token {
                 kind: TokenKind::Optional,
-                span: Range { start: 2, end: 3 }
+                range: Range { start: 2, end: 3 }
             })
         ));
         assert!(matches!(
             iter.next(),
             Some(Token {
                 kind: TokenKind::Required,
-                span: Range { start: 3, end: 10 }
+                range: Range { start: 3, end: 10 }
             })
         ));
         assert!(matches!(
             iter.next(),
             Some(Token {
                 kind: TokenKind::Newline,
-                span: Range { start: 10, end: 11 }
+                range: Range { start: 10, end: 11 }
             })
         ));
         assert!(matches!(
             iter.next(),
             Some(Token {
                 kind: TokenKind::Optional,
-                span: Range { start: 11, end: 13 }
+                range: Range { start: 11, end: 13 }
             })
         ));
         assert!(matches!(
             iter.next(),
             Some(Token {
                 kind: TokenKind::Required,
-                span: Range { start: 13, end: 17 }
+                range: Range { start: 13, end: 17 }
             })
         ));
         assert!(matches!(
             iter.next(),
             Some(Token {
                 kind: TokenKind::Optional,
-                span: Range { start: 17, end: 18 }
+                range: Range { start: 17, end: 18 }
             })
         ));
         assert!(matches!(
             iter.next(),
             Some(Token {
                 kind: TokenKind::Required,
-                span: Range { start: 18, end: 23 }
+                range: Range { start: 18, end: 23 }
             })
         ));
     }

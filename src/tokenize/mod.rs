@@ -23,5 +23,5 @@ pub enum TokenKind {
 #[derive(Clone, Debug)]
 pub struct Token {
     pub kind: TokenKind,
-    pub span: Range<usize>,
+    pub range: Range<usize>,
 }
