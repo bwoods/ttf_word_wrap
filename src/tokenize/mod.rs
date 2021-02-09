@@ -1,12 +1,4 @@
-use std::ops::Range;
-
 pub mod whitespace;
-
-//pub type Tokenizer<'a> = dyn Fn(&'a str) -> Box<dyn Iterator<Item = Token> + 'a>;
-
-pub trait Tokenizer: std::fmt::Debug {
-    fn tokenize<'a>(&self, text: &'a str) -> Box<dyn Iterator<Item = Token> + 'a>;
-}
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum TokenKind {
@@ -22,6 +14,29 @@ pub enum TokenKind {
 
 #[derive(Clone, Debug)]
 pub struct Token {
+    /// The `TokenKind` of the token.
     pub kind: TokenKind,
-    pub range: Range<usize>,
+
+    /// Where the token starts in `text`
+    pub start: usize,
+
+    /// Where the token ends in `text`
+    pub end: usize,
+
+    /// The width of the token for the given font
+    pub width: u32,
 }
+
+impl Token {
+    pub fn split_at(self, index: usize) -> (Token, Token) {
+        unimplemented!()
+    }
+}
+
+/*
+impl<'a> std::fmt::Display for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.text[self.start..self.end])
+    }
+}
+*/
