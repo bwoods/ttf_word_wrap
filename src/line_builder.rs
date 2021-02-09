@@ -1,80 +1,73 @@
-use std::{fmt::Formatter, iter::Peekable};
+use std::fmt::Formatter;
 
-use crate::tokenize::{Token, TokenKind};
+use crate::{partial_tokens::PartialTokens, Token};
 
-pub trait LineBuilder: std::fmt::Debug {
-    fn build<'a>(
-        &self,
-        max_width: u32,
-        tokens: Box<dyn Iterator<Item = Token>>,
-    ) -> Box<dyn Iterator<Item = &'a str> + 'a>;
+pub trait Lines<T> {
+    fn lines(self, max_width: u32) -> LineIterator<T>;
 }
 
-/// Provides lines as `&str`
-#[derive(Debug)]
-pub struct DefaultLineBuilder {}
-
-impl DefaultLineBuilder {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
-
-impl LineBuilder for DefaultLineBuilder {
-    fn build<'a, 'g>(
-        &self,
-        max_width: u32,
-        tokens: Box<dyn Iterator<Item = Token> + 'a>,
-    ) -> Box<dyn Iterator<Item = &'a str> + 'a> {
-        let tokens = tokens.peekable();
-        Box::new(DefaultLineIterator { max_width, tokens })
+impl<'a, T> Lines<T> for T
+where
+    T: PartialTokens<Item = Token<'a>> + 'a,
+{
+    fn lines(self, max_width: u32) -> LineIterator<T> {
+        LineIterator {
+            max_width,
+            tokens: self,
+        }
     }
 }
 
 /// Provides lines as `&str`
-pub struct DefaultLineIterator<'a> {
+#[derive(Clone, PartialEq)]
+pub struct LineIterator<T> {
     max_width: u32,
-    tokens: Peekable<Box<dyn Iterator<Item = Token> + 'a>>,
+    tokens: T,
 }
 
-impl<'a> std::fmt::Debug for DefaultLineIterator<'a> {
+impl<T> std::fmt::Debug for LineIterator<T>
+where
+    T: std::fmt::Debug,
+{
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("LineIterator").finish()
+        f.debug_struct("LineIterator")
+            .field("max_width", &self.max_width)
+            .finish()
     }
 }
 
-impl<'a> Iterator for DefaultLineIterator<'a> {
+impl<'a, T> Iterator for LineIterator<T>
+where
+    T: PartialTokens<Item = Token<'a>> + 'a,
+{
     type Item = &'a str;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let first = self.tokens.peek()?.clone();
-        let mut last = first.clone();
+        let mut width_remaining = self.max_width;
+        let mut start_token = None;
+        let mut end_token = None;
 
-        // build a line by collecting tokens up to max_width,
-        // or if a newline is found
-        let mut width = 0;
+        dbg!();
 
-        while let Some(token_width) = self.tokens.peek() {
-            let next_width = token_width.width + width;
-
-            if next_width > self.max_width {
-                // taking another token would make the line too long
-                break;
+        while let Some(token) = dbg!(self.tokens.next(width_remaining)) {
+            let token_width = token.width;
+            dbg!(width_remaining, token_width);
+            if start_token.is_none() {
+                start_token.replace(token);
+            } else {
+                end_token.replace(token);
             }
-
-            // Width is fine, pull the token
-            let token = self.tokens.next().unwrap();
-
-            // newlines cause the current line to stop
-            if token_width.token.kind == TokenKind::Newline {
-                break;
-            }
-
-            width = next_width;
-            last = token_width;
+            width_remaining -= token_width;
         }
 
-        Some(&first.token.text[first.token.start..last.token.end])
+        match (start_token, end_token) {
+            (None, None) => None,
+            (None, Some(_)) => unreachable!(),
+            (Some(token), None) => Some(&token.text[token.start..token.end]),
+            (Some(start_token), Some(end_token)) => {
+                Some(&start_token.text[start_token.start..end_token.end])
+            }
+        }
     }
 }
 
@@ -82,7 +75,10 @@ impl<'a> Iterator for DefaultLineIterator<'a> {
 mod tests {
     use ttf_parser::Face;
 
-    use crate::{tokenize::whitespace::TokenizeWhiteSpace, wrap_at::WrapAt};
+    use crate::{
+        char_width::WithCharWidth, partial_tokens::WithPartialTokens,
+        tokenize::whitespace::TokenizeWhiteSpace,
+    };
 
     use super::*;
 
@@ -91,20 +87,24 @@ mod tests {
         let font_data = crate::tests::read_font();
         let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
 
-        let line_builder = DefaultLineBuilder::new();
+        let text = "1234567890";
+        let mut lines = text
+            .with_char_width(&font_face)
+            .tokenize_white_space()
+            .with_partial_tokens(5000)
+            .lines(5000);
 
-        let tokens = "test".tokenize_white_space();
+        let token = lines.next().unwrap();
+        assert_eq!("1234", token);
 
-        let max_width = 3000;
-        let max_width_tokens = Box::new(WrapAt::new(max_width, tokens));
-        let lines: Vec<&str> = line_builder
-            .build(max_width, max_width_tokens, &glyph_dimensions)
-            .collect();
+        let token = lines.next().unwrap();
+        assert_eq!("5678", token);
 
-        // if the word is too long for the width given
-        // | | width
-        //  t est
+        let token = lines.next().unwrap();
+        assert_eq!("90", token);
 
-        assert_eq!(lines, vec!["t", "e", "s", "t"]);
+        // // no more
+        // let token = lines.next();
+        // assert!(token.is_none());
     }
 }

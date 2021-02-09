@@ -1,14 +1,14 @@
-use crate::tokenize::Token;
+use crate::Token;
 
-pub trait WithPartialTokens<T> {
-    fn with_partial_tokens(self, max_width: u32) -> PartialTokensIterator<T>;
+pub trait WithPartialTokens<'a, T> {
+    fn with_partial_tokens(self, max_width: u32) -> PartialTokensIterator<'a, T>;
 }
 
-impl<T> WithPartialTokens<T> for T
+impl<'a, T> WithPartialTokens<'a, T> for T
 where
-    T: Iterator<Item = Token>,
+    T: Iterator<Item = Token<'a>> + 'a,
 {
-    fn with_partial_tokens(self, max_width: u32) -> PartialTokensIterator<T> {
+    fn with_partial_tokens(self, max_width: u32) -> PartialTokensIterator<'a, T> {
         PartialTokensIterator {
             max_width,
             tokens: self,
@@ -20,42 +20,50 @@ where
 pub trait PartialTokens {
     type Item;
 
-    fn next(&mut self, space_remaining: usize) -> Option<Self::Item>;
+    fn next(&mut self, space_remaining: u32) -> Option<Self::Item>;
 }
 
-pub struct PartialTokensIterator<T> {
+pub struct PartialTokensIterator<'a, T> {
     max_width: u32,
     tokens: T,
-    partial: Option<Token>,
+    partial: Option<Token<'a>>,
 }
 
-impl<T> PartialTokensIterator<T> {
-    pub fn new(tokens: T, max_width: u32) -> Self {
-        Self {
-            tokens,
-            partial: None,
-            max_width,
-        }
-    }
-
-    fn process_partial(&mut self, token: Token, space_remaining: usize) -> Option<Token> {
+impl<'a, T> PartialTokensIterator<'a, T> {
+    fn process_partial(&mut self, token: Token<'a>, space_remaining: u32) -> Option<Token<'a>> {
         if token.width > self.max_width {
-            let (head, tail) = token.split_at(space_remaining);
-            self.partial.replace(tail);
-            Some(head)
+            // If the word is wider than the max_width we break it anywhere
+            match token.split_at(space_remaining) {
+                (None, None) => None,
+                (None, Some(partial)) => {
+                    self.partial.replace(partial);
+                    None
+                }
+                (Some(partial), None) => Some(partial),
+                (Some(head), Some(tail)) => {
+                    self.partial.replace(tail);
+                    Some(head)
+                }
+            }
+        } else if token.width > space_remaining {
+            // If the word is not wider than the max width and the line doesn't have room, return
+            // None
+            self.partial.replace(token);
+            None
         } else {
+            // There is room on the line for the token
             Some(token)
         }
     }
 }
 
-impl<T> PartialTokens for PartialTokensIterator<T>
+impl<'a, T> PartialTokens for PartialTokensIterator<'a, T>
 where
-    T: Iterator<Item = Token>,
+    T: Iterator<Item = Token<'a>> + 'a,
 {
-    type Item = Token;
+    type Item = Token<'a>;
 
-    fn next(&mut self, space_remaining: usize) -> Option<Self::Item> {
+    fn next(&mut self, space_remaining: u32) -> Option<Self::Item> {
         match self.partial.take() {
             Some(partial) => self.process_partial(partial, space_remaining),
             None => {
@@ -70,32 +78,31 @@ where
 mod tests {
     use ttf_parser::Face;
 
-    use crate::{
-        char_width::WithCharWidth,
-        tokenize::{whitespace::TokenizeWhiteSpace, TokenKind},
-    };
+    use crate::{char_width::WithCharWidth, tokenize::whitespace::TokenizeWhiteSpace};
 
     use super::*;
 
     #[test]
-    fn tiny_width() {
+    fn partials() {
         let font_data = crate::tests::read_font();
         let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
 
-        let mut partials = "aoeuaoeuaoeuaoeaoeu"
-            .with_char_width(font_face)
+        let text = "aoeuaoeuaoeuaoeaoeu";
+        let mut partials = text
+            .with_char_width(&font_face)
             .tokenize_white_space()
-            .with_partial_tokens(1000);
+            .with_partial_tokens(10000);
 
-        let token = partials.next(1000).unwrap();
-        assert!(matches!(
-            Token {
-                kind: TokenKind::Required,
-                start: 0,
-                end: 1,
-                width: 2500
-            },
-            token
-        ));
+        // get a few tokens
+        let token = partials.next(3000).unwrap();
+        assert_eq!("ao", token.to_string());
+
+        // a full line width
+        let token = partials.next(10000).unwrap();
+        assert_eq!("euaoeuao", token.to_string());
+
+        // not enough room for a character
+        let token = partials.next(500);
+        assert!(token.is_none());
     }
 }

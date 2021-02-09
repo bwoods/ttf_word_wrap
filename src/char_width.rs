@@ -3,30 +3,38 @@ use std::str::Chars;
 use ttf_parser::Face;
 
 /// A char and it's rendered width
-#[derive(Copy, Clone, PartialEq, Debug)]
-pub struct CharWidth {
+#[derive(Clone, Debug)]
+pub struct CharWidth<'a> {
+    pub font_face: &'a Face<'a>,
+    pub text: &'a str,
     pub ch: char,
-    pub width: u32,
+    pub width: u16,
 }
 
 pub trait WithCharWidth {
-    fn with_char_width<'a>(&'a self, font_face: Face<'a>) -> CharWidthIterator<'a>;
+    fn with_char_width<'a>(&'a self, font_face: &'a Face<'a>) -> CharWidthIterator<'a>;
 }
 
 impl WithCharWidth for str {
-    fn with_char_width<'a>(&'a self, font_face: Face<'a>) -> CharWidthIterator<'a> {
+    fn with_char_width<'a>(&'a self, font_face: &'a Face<'a>) -> CharWidthIterator<'a> {
         let chars = self.chars();
-        CharWidthIterator { font_face, chars }
+        CharWidthIterator {
+            font_face,
+            chars,
+            text: self,
+        }
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct CharWidthIterator<'a> {
-    font_face: Face<'a>,
+    font_face: &'a Face<'a>,
     chars: Chars<'a>,
+    text: &'a str,
 }
 
 impl<'a> Iterator for CharWidthIterator<'a> {
-    type Item = CharWidth;
+    type Item = CharWidth<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let ch = self.chars.next()?;
@@ -36,8 +44,13 @@ impl<'a> Iterator for CharWidthIterator<'a> {
             .glyph_index(ch)
             .map(|glyph_index| self.font_face.glyph_hor_advance(glyph_index))
             .flatten()
-            .unwrap_or_default() as u32;
+            .unwrap_or_default();
 
-        Some(CharWidth { ch, width })
+        Some(CharWidth {
+            ch,
+            width,
+            font_face: self.font_face,
+            text: self.text,
+        })
     }
 }
