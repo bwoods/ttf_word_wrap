@@ -1,4 +1,4 @@
-use crate::Token;
+use crate::token::Token;
 
 pub trait WithPartialTokens<'a, T> {
     fn with_partial_tokens(self, max_width: u32) -> PartialTokensIterator<'a, T>;
@@ -23,6 +23,7 @@ pub trait PartialTokens {
     fn next(&mut self, space_remaining: u32) -> Option<Self::Item>;
 }
 
+#[derive(Clone, Debug)]
 pub struct PartialTokensIterator<'a, T> {
     max_width: u32,
     tokens: T,
@@ -78,7 +79,7 @@ where
 mod tests {
     use ttf_parser::Face;
 
-    use crate::{char_width::WithCharWidth, tokenize::whitespace::TokenizeWhiteSpace};
+    use crate::{char_width::WithCharWidth, whitespace::TokenizeWhiteSpace};
 
     use super::*;
 

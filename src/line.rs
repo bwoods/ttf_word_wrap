@@ -1,6 +1,6 @@
 use std::fmt::Formatter;
 
-use crate::{partial_tokens::PartialTokens, Token};
+use crate::{partial_tokens::PartialTokens, token::Token};
 
 pub trait Lines<T> {
     fn lines(self, max_width: u32) -> LineIterator<T>;
@@ -77,7 +77,7 @@ mod tests {
 
     use crate::{
         char_width::WithCharWidth, partial_tokens::WithPartialTokens,
-        tokenize::whitespace::TokenizeWhiteSpace,
+        whitespace::TokenizeWhiteSpace,
     };
 
     use super::*;

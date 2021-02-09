@@ -1,6 +1,15 @@
 use std::{char, iter::Peekable};
 
-use crate::{char_width::CharWidth, Token, TokenKind};
+use ttf_parser::Face;
+
+use crate::{
+    char_width::{CharWidth, CharWidthIterator, WithCharWidth},
+    line::{LineIterator, Lines},
+    partial_tokens::{PartialTokensIterator, WithPartialTokens},
+    token::Token,
+    token::TokenKind,
+    word_wrap::WordWrap,
+};
 
 #[derive(Copy, Clone, PartialEq)]
 enum State {
@@ -47,7 +56,7 @@ where
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct WhiteSpaceIterator<'a, T>
 where
     T: Iterator<Item = CharWidth<'a>> + Clone,
@@ -115,6 +124,34 @@ where
     }
 }
 
+/// WordWrap for variable-width TTF text.
+#[derive(Debug)]
+pub struct WhiteSpaceWordWrap<'fnt> {
+    max_width: u32,
+    font_face: &'fnt Face<'fnt>,
+}
+
+impl<'fnt> WhiteSpaceWordWrap<'fnt> {
+    pub fn new(max_width: u32, font_face: &'fnt Face<'fnt>) -> Self {
+        Self {
+            max_width,
+            font_face,
+        }
+    }
+}
+
+impl<'fnt, 'txt: 'fnt> WordWrap<'fnt, 'txt> for WhiteSpaceWordWrap<'fnt> {
+    type Iterator = LineIterator<
+        PartialTokensIterator<'fnt, WhiteSpaceIterator<'fnt, CharWidthIterator<'fnt>>>,
+    >;
+
+    fn word_wrap(&self, text: &'txt str) -> Self::Iterator {
+        text.with_char_width(self.font_face)
+            .tokenize_white_space()
+            .with_partial_tokens(self.max_width)
+            .lines(self.max_width)
+    }
+}
 #[cfg(test)]
 mod tests {
 
