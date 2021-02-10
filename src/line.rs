@@ -1,9 +1,6 @@
 use std::fmt::Formatter;
 
-use crate::{
-    partial_tokens::PartialTokens,
-    token::{Token, TokenKind},
-};
+use crate::{partial_tokens::PartialTokens, token::TokenKind};
 
 pub trait Lines<T> {
     fn lines(self, max_width: u32) -> LineIterator<T>;
@@ -11,7 +8,7 @@ pub trait Lines<T> {
 
 impl<'a, T> Lines<T> for T
 where
-    T: PartialTokens<Item = Token<'a>> + 'a,
+    T: PartialTokens<Item = TokenKind<'a>> + 'a,
 {
     fn lines(self, max_width: u32) -> LineIterator<T> {
         LineIterator {
@@ -41,48 +38,56 @@ where
 
 impl<'a, T> Iterator for LineIterator<T>
 where
-    T: PartialTokens<Item = Token<'a>> + 'a,
+    T: PartialTokens<Item = TokenKind<'a>> + 'a,
 {
     type Item = &'a str;
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut width_remaining = self.max_width;
-        let mut start_token: Option<Token<'a>> = None;
-        let mut last_token: Option<Token<'a>> = None;
-        let mut next_to_last_token: Option<Token<'a>> = None;
+        let mut start_token: Option<TokenKind<'a>> = None;
+        let mut last_token: Option<TokenKind<'a>> = None;
+        let mut next_to_last_token: Option<TokenKind<'a>> = None;
 
         // Take tokens until there is no more space left (or the next token doesn't fit)
-        while let Some(token) = self.tokens.next(width_remaining) {
-            let token_width = token.width;
+        while let Some(token_kind) = self.tokens.next(width_remaining) {
+            let kind = token_kind.kind();
+
+            if token_kind.is_newline() {
+                break;
+            }
 
             // Skip optional tokens at the beginning of a line
-            if start_token.is_none() && token.kind == TokenKind::Optional {
+            if start_token.is_none() && token_kind.is_optional() {
                 continue;
             }
 
+            let token = token_kind.into_token();
+
+            // record the width
+            width_remaining -= token.width;
+
             if start_token.is_none() {
                 // Keep track of the first token
-                start_token.replace(token);
+                start_token.replace(kind.token(token));
             } else {
                 // So that the last token can be discarded later, track the next-to-last token
                 if let Some(end_token) = last_token.take() {
                     next_to_last_token.replace(end_token);
                 }
-                last_token.replace(token);
+                last_token.replace(kind.token(token));
             }
-
-            width_remaining -= token_width;
         }
 
         // Swap the previous and the end tokens if the end token is optional
-        let end_token_kind = last_token.as_ref().map(|t| t.kind.clone());
-
-        let end_token = match (next_to_last_token, last_token, end_token_kind) {
-            (Some(previous), _, Some(TokenKind::Optional)) => Some(previous),
-            (_, end, _) => end,
+        let end_token = match (next_to_last_token, last_token) {
+            (Some(previous), Some(TokenKind::Optional(_))) => Some(previous),
+            (_, last) => last,
         };
 
-        match (start_token, end_token) {
+        match (
+            start_token.map(TokenKind::into_token),
+            end_token.map(TokenKind::into_token),
+        ) {
             (None, None) => None,
             (None, Some(_)) => unreachable!(),
             (Some(token), None) => Some(&token.text[token.start..token.end]),
@@ -124,5 +129,27 @@ mod tests {
 
         let token = lines.next().unwrap();
         assert_eq!("90", token);
+    }
+
+    #[test]
+    fn with_newlines() {
+        let font_data = crate::tests::read_font();
+        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+
+        let text = "123\n456\r\n7890";
+        let mut lines = text
+            .with_char_width(&font_face)
+            .tokenize_white_space()
+            .with_partial_tokens(5000)
+            .lines(5000);
+
+        let token = lines.next().unwrap();
+        assert_eq!("123", token);
+
+        let token = lines.next().unwrap();
+        assert_eq!("456", token);
+
+        let token = lines.next().unwrap();
+        assert_eq!("7890", token);
     }
 }

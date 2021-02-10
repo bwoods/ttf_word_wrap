@@ -25,11 +25,14 @@
 
 mod char_width;
 mod line;
+// mod line_break;
 mod partial_tokens;
+mod position;
 mod token;
 mod whitespace;
 mod word_wrap;
 
+pub use position::Position;
 pub use whitespace::WhiteSpaceWordWrap;
 pub use word_wrap::Wrap;
 

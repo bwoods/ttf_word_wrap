@@ -30,16 +30,6 @@ impl From<&char> for State {
     }
 }
 
-impl From<State> for TokenKind {
-    fn from(state: State) -> Self {
-        match state {
-            State::Newline => TokenKind::Newline,
-            State::WhiteSpace => TokenKind::Optional,
-            State::Other => TokenKind::Required,
-        }
-    }
-}
-
 pub trait TokenizeWhiteSpace<'a, T>
 where
     T: Iterator<Item = CharWidth<'a>> + Clone,
@@ -78,19 +68,20 @@ impl<'a, T> Iterator for WhiteSpaceIterator<'a, T>
 where
     T: Iterator<Item = CharWidth<'a>> + Clone,
 {
-    type Item = Token<'a>;
+    type Item = TokenKind<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         // Get the 'mode' for the next `Span` whitespace or not
         // will return None if there is no more text
         let char_width = self.chars.peek()?;
         let text = char_width.text;
-        let font_face = char_width.font_face;
         let state = State::from(&char_width.ch);
 
         // keep track of the start of the span
         let start = self.index as usize;
         let mut end = self.index as usize;
+
+        let mut widths = Vec::new();
 
         // The width of the characters
         let mut total_width: u32 = 0;
@@ -106,21 +97,25 @@ where
             // Increment the end of the span
             end += char_width.ch.len_utf8();
             total_width += u32::from(char_width.display_width);
+            widths.push(char_width.display_width);
         }
 
         self.index = end;
 
-        // Done scanning, prep for the next token
-        let kind = TokenKind::from(state);
-
-        Some(Token {
+        let token = Token {
             text,
-            font_face,
             start,
             end,
-            kind,
             width: total_width,
-        })
+            widths,
+        };
+
+        match state {
+            State::Newline => TokenKind::Newline(token),
+            State::WhiteSpace => TokenKind::Optional(token),
+            State::Other => TokenKind::Required(token),
+        }
+        .into()
     }
 }
 
@@ -166,75 +161,72 @@ mod tests {
 
     #[test]
     fn one_word() {
-        use TokenKind::*;
-
         let font_data = crate::tests::read_font();
         let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
 
-        let iter = WhiteSpaceIterator::new("word".with_char_width(&font_face).peekable());
+        let text = "word";
+        let mut iter = WhiteSpaceIterator::new(text.with_char_width(&font_face).peekable());
 
-        let words: Vec<String> = iter.clone().map(|t| t.to_string()).collect();
+        let words: Vec<String> = iter.clone().map(|t| t.into_token().to_string()).collect();
         assert_eq!(words, vec!["word"]);
 
-        let kinds: Vec<TokenKind> = iter.clone().map(|t| t.kind).collect();
-        assert_eq!(kinds, vec![Required]);
+        assert!(matches!(iter.next(), Some(TokenKind::Required(_))));
     }
 
     #[test]
     fn begin_rn() {
-        use TokenKind::*;
-
         let font_data = crate::tests::read_font();
         let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
 
-        let iter = WhiteSpaceIterator::new("\r\na\n".with_char_width(&font_face).peekable());
+        let mut iter = WhiteSpaceIterator::new("\r\na\n".with_char_width(&font_face).peekable());
 
-        let words: Vec<String> = iter.clone().map(|t| t.to_string()).collect();
+        let words: Vec<String> = iter.clone().map(|t| t.into_token().to_string()).collect();
         assert_eq!(words, vec!["\r\n", "a", "\n"]);
 
-        let kinds: Vec<TokenKind> = iter.clone().map(|t| t.kind).collect();
-        assert_eq!(kinds, vec![Newline, Required, Newline]);
+        assert!(matches!(iter.next(), Some(TokenKind::Newline(_))));
+        assert!(matches!(iter.next(), Some(TokenKind::Required(_))));
+        assert!(matches!(iter.next(), Some(TokenKind::Newline(_))));
     }
 
     #[test]
     fn newline_breaks_ws() {
-        use TokenKind::*;
-
         let font_data = crate::tests::read_font();
         let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
 
-        let iter = WhiteSpaceIterator::new("  \n  ".with_char_width(&font_face).peekable());
+        let mut iter = WhiteSpaceIterator::new("  \n  ".with_char_width(&font_face).peekable());
 
-        let words: Vec<String> = iter.clone().map(|t| t.to_string()).collect();
+        let words: Vec<String> = iter.clone().map(|t| t.into_token().to_string()).collect();
         assert_eq!(words, vec!["  ", "\n", "  "]);
 
-        let kinds: Vec<TokenKind> = iter.clone().map(|t| t.kind).collect();
-        assert_eq!(kinds, vec![Optional, Newline, Optional]);
+        assert!(matches!(iter.next(), Some(TokenKind::Optional(_))));
+        assert!(matches!(iter.next(), Some(TokenKind::Newline(_))));
+        assert!(matches!(iter.next(), Some(TokenKind::Optional(_))));
     }
 
     #[test]
     fn mixed() {
-        use TokenKind::*;
-
         let font_data = crate::tests::read_font();
         let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
 
-        let iter = WhiteSpaceIterator::new(
+        let mut iter = WhiteSpaceIterator::new(
             "at newline\n  some thing"
                 .with_char_width(&font_face)
                 .peekable(),
         );
 
-        let words: Vec<String> = iter.clone().map(|t| t.to_string()).collect();
+        let words: Vec<String> = iter.clone().map(|t| t.into_token().to_string()).collect();
         assert_eq!(
             words,
             vec!["at", " ", "newline", "\n", "  ", "some", " ", "thing"]
         );
 
-        let kinds: Vec<TokenKind> = iter.clone().map(|t| t.kind).collect();
-        assert_eq!(
-            kinds,
-            vec![Required, Optional, Required, Newline, Optional, Required, Optional, Required]
-        );
+        assert!(matches!(iter.next(), Some(TokenKind::Required(_))));
+        assert!(matches!(iter.next(), Some(TokenKind::Optional(_))));
+        assert!(matches!(iter.next(), Some(TokenKind::Required(_))));
+        assert!(matches!(iter.next(), Some(TokenKind::Newline(_))));
+        assert!(matches!(iter.next(), Some(TokenKind::Optional(_))));
+        assert!(matches!(iter.next(), Some(TokenKind::Required(_))));
+        assert!(matches!(iter.next(), Some(TokenKind::Optional(_))));
+        assert!(matches!(iter.next(), Some(TokenKind::Required(_))));
     }
 }
