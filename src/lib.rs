@@ -15,7 +15,8 @@
 //! let word_wrap = WhiteSpaceWordWrap::new(20000, &font_face);
 //!
 //! // Use the `Wrap` trait and split the `&str`
-//! let lines: Vec<&str> = "Mary had a little lamb whose fleece was white as snow".wrap(&word_wrap).collect();
+//! let poem = "Mary had a little lamb whose fleece was white as snow";
+//! let lines: Vec<&str> = poem.wrap(&word_wrap).collect();
 //! assert_eq!(lines[0], "Mary had a little lamb");
 //!```
 #![warn(missing_docs, missing_debug_implementations, rust_2018_idioms)]
