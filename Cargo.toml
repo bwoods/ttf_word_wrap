@@ -3,6 +3,14 @@ name = "ttf_word_wrap"
 version = "0.1.0"
 authors = ["Benjamin Halsted <bg@hlstd.com>"]
 edition = "2018"
+license = "MIT"
+
+categories = ["text-processing"]
+description = "Wraps text based on character width."
+documentation = "https://docs.rs/ttf_word_wrap"
+keywords = ["font", "wrap", "word", "wordwrap"]
+readme = "README.md"
+repository = "https://sr.ht/~halzy/ttf_word_wrap/"
 
 [dependencies]
 ttf-parser = "0.11.0"
