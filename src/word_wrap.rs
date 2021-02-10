@@ -3,10 +3,14 @@ pub trait WordWrap<'fnt, 'txt: 'fnt> {
     fn word_wrap(&'fnt self, text: &'txt str) -> Self::Iterator;
 }
 
+/// Provides `.wrap()` on `&str`s
+///
+/// The behavior of the wrapping can change depending on the `WordWrap` type passed in.
 pub trait Wrap<'fnt, 'txt: 'fnt, T>
 where
     T: WordWrap<'fnt, 'txt>,
 {
+    /// Based on the `word_wrap` provided, provides an iterator of split lines.
     fn wrap(&self, word_wrap: &'fnt T) -> T::Iterator;
 }
 

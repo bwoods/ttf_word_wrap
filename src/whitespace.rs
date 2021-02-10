@@ -105,7 +105,7 @@ where
 
             // Increment the end of the span
             end += char_width.ch.len_utf8();
-            total_width += u32::from(char_width.width);
+            total_width += u32::from(char_width.display_width);
         }
 
         self.index = end;
@@ -132,6 +132,9 @@ pub struct WhiteSpaceWordWrap<'fnt> {
 }
 
 impl<'fnt> WhiteSpaceWordWrap<'fnt> {
+    /// Creates a new `WhiteSpaceWordWrap`
+    ///
+    /// Will wrap at `max_width` and measure the glyphs using `font_face`
     pub fn new(max_width: u32, font_face: &'fnt Face<'fnt>) -> Self {
         Self {
             max_width,

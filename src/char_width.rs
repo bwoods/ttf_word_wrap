@@ -1,14 +1,15 @@
+//! Useful when creating new wrapping iterators.
 use std::str::Chars;
 
 use ttf_parser::Face;
 
-/// A char and it's rendered width
+/// A char and it's display width, along wtith the `font_face` and `&str` it came from.
 #[derive(Clone, Debug)]
 pub struct CharWidth<'a> {
     pub font_face: &'a Face<'a>,
     pub text: &'a str,
     pub ch: char,
-    pub width: u16,
+    pub display_width: u16,
 }
 
 pub trait WithCharWidth {
@@ -48,7 +49,7 @@ impl<'a> Iterator for CharWidthIterator<'a> {
 
         Some(CharWidth {
             ch,
-            width,
+            display_width: width,
             font_face: self.font_face,
             text: self.text,
         })

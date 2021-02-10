@@ -1,6 +1,9 @@
 use std::fmt::Formatter;
 
-use crate::{partial_tokens::PartialTokens, token::Token};
+use crate::{
+    partial_tokens::PartialTokens,
+    token::{Token, TokenKind},
+};
 
 pub trait Lines<T> {
     fn lines(self, max_width: u32) -> LineIterator<T>;
@@ -44,21 +47,40 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut width_remaining = self.max_width;
-        let mut start_token = None;
-        let mut end_token = None;
+        let mut start_token: Option<Token<'a>> = None;
+        let mut last_token: Option<Token<'a>> = None;
+        let mut next_to_last_token: Option<Token<'a>> = None;
 
-        dbg!();
-
-        while let Some(token) = dbg!(self.tokens.next(width_remaining)) {
+        // Take tokens until there is no more space left (or the next token doesn't fit)
+        while let Some(token) = self.tokens.next(width_remaining) {
             let token_width = token.width;
-            dbg!(width_remaining, token_width);
+
+            // Skip optional tokens at the beginning of a line
+            if start_token.is_none() && token.kind == TokenKind::Optional {
+                continue;
+            }
+
             if start_token.is_none() {
+                // Keep track of the first token
                 start_token.replace(token);
             } else {
-                end_token.replace(token);
+                // So that the last token can be discarded later, track the next-to-last token
+                if let Some(end_token) = last_token.take() {
+                    next_to_last_token.replace(end_token);
+                }
+                last_token.replace(token);
             }
+
             width_remaining -= token_width;
         }
+
+        // Swap the previous and the end tokens if the end token is optional
+        let end_token_kind = last_token.as_ref().map(|t| t.kind.clone());
+
+        let end_token = match (next_to_last_token, last_token, end_token_kind) {
+            (Some(previous), _, Some(TokenKind::Optional)) => Some(previous),
+            (_, end, _) => end,
+        };
 
         match (start_token, end_token) {
             (None, None) => None,
@@ -102,9 +124,5 @@ mod tests {
 
         let token = lines.next().unwrap();
         assert_eq!("90", token);
-
-        // // no more
-        // let token = lines.next();
-        // assert!(token.is_none());
     }
 }

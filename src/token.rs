@@ -45,7 +45,7 @@ impl<'a> Token<'a> {
     pub fn new(text: &'a str, kind: TokenKind, font_face: &'a Face<'a>) -> Self {
         let width = text
             .with_char_width(font_face)
-            .map(|char_width| u32::from(char_width.width))
+            .map(|char_width| u32::from(char_width.display_width))
             .sum();
 
         Self {
@@ -75,7 +75,7 @@ impl<'a> Token<'a> {
 
         let mut char_widths = self.text.with_char_width(self.font_face);
         while let Some(char_width) = char_widths.next() {
-            let next_width = head_width + u32::from(char_width.width);
+            let next_width = head_width + u32::from(char_width.display_width);
 
             if next_width > display_width {
                 break;
