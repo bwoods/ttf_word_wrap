@@ -1,7 +1,7 @@
 //! Useful when creating new wrapping iterators.
 use std::str::Chars;
 
-use ttf_parser::Face;
+use crate::display_width::DisplayWidth;
 
 /// A char and it's display width, along wtith the `font_face` and `&str` it came from.
 #[derive(Clone, Debug)]
@@ -12,14 +12,14 @@ pub struct CharWidth<'a> {
 }
 
 pub trait WithCharWidth {
-    fn with_char_width<'a>(&'a self, font_face: &'a Face<'a>) -> CharWidthIterator<'a>;
+    fn with_char_width<'a>(&'a self, display_width: &'a dyn DisplayWidth) -> CharWidthIterator<'a>;
 }
 
 impl WithCharWidth for str {
-    fn with_char_width<'a>(&'a self, font_face: &'a Face<'a>) -> CharWidthIterator<'a> {
+    fn with_char_width<'a>(&'a self, display_width: &'a dyn DisplayWidth) -> CharWidthIterator<'a> {
         let chars = self.chars();
         CharWidthIterator {
-            font_face,
+            display_width,
             chars,
             text: self,
         }
@@ -28,7 +28,7 @@ impl WithCharWidth for str {
 
 #[derive(Clone, Debug)]
 pub struct CharWidthIterator<'a> {
-    font_face: &'a Face<'a>,
+    display_width: &'a dyn DisplayWidth,
     chars: Chars<'a>,
     text: &'a str,
 }
@@ -39,12 +39,7 @@ impl<'a> Iterator for CharWidthIterator<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         let ch = self.chars.next()?;
 
-        let width = self
-            .font_face
-            .glyph_index(ch)
-            .map(|glyph_index| self.font_face.glyph_hor_advance(glyph_index))
-            .flatten()
-            .unwrap_or_default();
+        let width = self.display_width.measure_char(ch);
 
         Some(CharWidth {
             ch,

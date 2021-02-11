@@ -103,8 +103,8 @@ mod tests {
     use ttf_parser::Face;
 
     use crate::{
-        char_width::WithCharWidth, partial_tokens::WithPartialTokens,
-        whitespace::TokenizeWhiteSpace,
+        char_width::WithCharWidth, display_width::TTFParserDisplayWidth,
+        partial_tokens::WithPartialTokens, whitespace::TokenizeWhiteSpace,
     };
 
     use super::*;
@@ -113,11 +113,12 @@ mod tests {
     fn too_narrow() {
         let font_data = crate::tests::read_font();
         let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let display_width = TTFParserDisplayWidth::new(&font_face);
 
         let text = "1234567890";
         let mut lines = text
-            .with_char_width(&font_face)
-            .tokenize_white_space()
+            .with_char_width(&display_width)
+            .tokenize_white_space(&display_width)
             .with_partial_tokens(5000)
             .lines(5000);
 
@@ -135,11 +136,12 @@ mod tests {
     fn with_newlines() {
         let font_data = crate::tests::read_font();
         let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let display_width = TTFParserDisplayWidth::new(&font_face);
 
         let text = "123\n456\r\n7890";
         let mut lines = text
-            .with_char_width(&font_face)
-            .tokenize_white_space()
+            .with_char_width(&display_width)
+            .tokenize_white_space(&display_width)
             .with_partial_tokens(5000)
             .lines(5000);
 

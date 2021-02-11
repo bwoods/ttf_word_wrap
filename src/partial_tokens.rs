@@ -1,6 +1,11 @@
+use std::iter::Peekable;
+
 use crate::token::TokenKind;
 
-pub trait WithPartialTokens<'a, T> {
+pub trait WithPartialTokens<'a, T>
+where
+    T: Iterator<Item = TokenKind<'a>> + 'a,
+{
     fn with_partial_tokens(self, max_width: u32) -> PartialTokensIterator<'a, T>;
 }
 
@@ -11,7 +16,7 @@ where
     fn with_partial_tokens(self, max_width: u32) -> PartialTokensIterator<'a, T> {
         PartialTokensIterator {
             max_width,
-            tokens: self,
+            tokens: self.peekable(),
             partial: None,
         }
     }
@@ -21,53 +26,48 @@ pub trait PartialTokens {
     type Item;
 
     fn next(&mut self, space_remaining: u32) -> Option<Self::Item>;
+    fn peek(&mut self, space_remaining: u32) -> Option<Self::Item>;
 }
 
 #[derive(Clone, Debug)]
-pub struct PartialTokensIterator<'a, T> {
+pub struct PartialTokensIterator<'a, T>
+where
+    T: Iterator<Item = TokenKind<'a>> + 'a,
+{
     max_width: u32,
-    tokens: T,
+    tokens: Peekable<T>,
     partial: Option<TokenKind<'a>>,
 }
 
-impl<'a, T> PartialTokensIterator<'a, T> {
-    fn process_partial(
-        &mut self,
-        token_kind: TokenKind<'a>,
-        space_remaining: u32,
-    ) -> Option<TokenKind<'a>> {
-        let kind = token_kind.kind();
+// Takes a token and space remaining, returns a tuple of the head and tail of the split token.
+fn process_partial<'a>(
+    max_width: u32,
+    token_kind: TokenKind<'a>,
+    space_remaining: u32,
+) -> (Option<TokenKind<'a>>, Option<TokenKind<'a>>) {
+    let kind = token_kind.kind();
 
-        // Newlines pass though
-        if token_kind.is_newline() {
-            return Some(token_kind);
-        }
+    // Newlines pass though
+    if token_kind.is_newline() {
+        return (Some(token_kind), None);
+    }
 
-        let token = token_kind.into_token();
+    let token = token_kind.into_token();
 
-        if token.width > self.max_width {
-            // If the word is wider than the max_width we break it anywhere
-            match token.split_at(space_remaining) {
-                (None, None) => None,
-                (None, Some(partial)) => {
-                    self.partial.replace(kind.token(partial));
-                    None
-                }
-                (Some(partial), None) => Some(kind.token(partial)),
-                (Some(head), Some(tail)) => {
-                    self.partial.replace(kind.token(tail));
-                    Some(kind.token(head))
-                }
-            }
-        } else if token.width > space_remaining {
-            // If the word is not wider than the max width and the line doesn't have room, return
-            // None
-            self.partial.replace(kind.token(token));
-            None
-        } else {
-            // There is room on the line for the token
-            Some(kind.token(token))
-        }
+    if token.width > max_width {
+        // If the word is wider than the max_width we break it anywhere
+        let (head, tail) = token.split_at(space_remaining);
+        let head = head.map(|t| kind.token(t));
+        let tail = tail.map(|t| kind.token(t));
+        (head, tail)
+    } else if token.width > space_remaining {
+        // If the word is not wider than the max width and the line doesn't have room, return
+        // None
+        // self.partial.replace(kind.token(token));
+        (None, Some(kind.token(token)))
+    } else {
+        // There is room on the line for the token
+        (Some(kind.token(token)), None)
     }
 }
 
@@ -78,12 +78,36 @@ where
     type Item = TokenKind<'a>;
 
     fn next(&mut self, space_remaining: u32) -> Option<Self::Item> {
-        match self.partial.take() {
-            Some(partial) => self.process_partial(partial, space_remaining),
+        let head_tail = match self.partial.take() {
+            Some(partial) => process_partial(self.max_width, partial, space_remaining),
             None => {
                 let token = self.tokens.next()?;
-                self.process_partial(token, space_remaining)
+                process_partial(self.max_width, token, space_remaining)
             }
+        };
+
+        // If there is a tail, preserve it, return the heads
+        match head_tail {
+            (head, None) => head,
+            (head, Some(tail)) => {
+                self.partial.replace(tail);
+                head
+            }
+        }
+    }
+
+    fn peek(&mut self, space_remaining: u32) -> Option<Self::Item> {
+        let head_tail = match self.partial.clone() {
+            Some(partial) => process_partial(self.max_width, partial, space_remaining),
+            None => {
+                let token = self.tokens.peek()?.clone();
+                process_partial(self.max_width, token, space_remaining)
+            }
+        };
+
+        // If there is a tail, preserve it, return the heads
+        match head_tail {
+            (head, _) => head,
         }
     }
 }
@@ -92,7 +116,10 @@ where
 mod tests {
     use ttf_parser::Face;
 
-    use crate::{char_width::WithCharWidth, whitespace::TokenizeWhiteSpace};
+    use crate::{
+        char_width::WithCharWidth, display_width::TTFParserDisplayWidth,
+        whitespace::TokenizeWhiteSpace,
+    };
 
     use super::*;
 
@@ -100,11 +127,12 @@ mod tests {
     fn partials() {
         let font_data = crate::tests::read_font();
         let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let display_width = TTFParserDisplayWidth::new(&font_face);
 
         let text = "aoeuaoeuaoeuaoeaoeu";
         let mut partials = text
-            .with_char_width(&font_face)
-            .tokenize_white_space()
+            .with_char_width(&display_width)
+            .tokenize_white_space(&display_width)
             .with_partial_tokens(10000);
 
         // get a few tokens
@@ -124,11 +152,12 @@ mod tests {
     fn partial_newline() {
         let font_data = crate::tests::read_font();
         let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let display_width = TTFParserDisplayWidth::new(&font_face);
 
         let text = "aoeu\naoeu";
         let mut partials = text
-            .with_char_width(&font_face)
-            .tokenize_white_space()
+            .with_char_width(&display_width)
+            .tokenize_white_space(&display_width)
             .with_partial_tokens(20000);
 
         //

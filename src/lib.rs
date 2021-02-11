@@ -5,14 +5,15 @@
 //!
 //!```
 //! use ttf_parser::Face;
-//! use ttf_word_wrap::{Wrap, WhiteSpaceWordWrap};
+//! use ttf_word_wrap::{Wrap, WhiteSpaceWordWrap, TTFParserDisplayWidth};
 //!
 //! // Load a TrueType font using `ttf_parser`
 //! let font_data = std::fs::read("./test_fonts/Roboto-Regular.ttf").expect("TTF should exist");
 //! let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+//! let display_width = TTFParserDisplayWidth::new(&font_face);
 //!
 //! // Set up wrapping options, split on whitespace:
-//! let word_wrap = WhiteSpaceWordWrap::new(20000, &font_face);
+//! let word_wrap = WhiteSpaceWordWrap::new(20000, &display_width);
 //!
 //! // Use the `Wrap` trait and split the `&str`
 //! let poem = "Mary had a little lamb whose fleece was white as snow";
@@ -24,14 +25,16 @@
 #![doc(test(attr(allow(unused_extern_crates, unused_variables))))]
 
 mod char_width;
+mod display_width;
 mod line;
-// mod line_break;
+mod line_break;
 mod partial_tokens;
 mod position;
 mod token;
 mod whitespace;
 mod word_wrap;
 
+pub use display_width::{DisplayWidth, TTFParserDisplayWidth};
 pub use position::Position;
 pub use whitespace::WhiteSpaceWordWrap;
 pub use word_wrap::Wrap;
@@ -42,7 +45,9 @@ mod tests {
 
     use ttf_parser::Face;
 
-    use crate::{whitespace::WhiteSpaceWordWrap, word_wrap::Wrap};
+    use crate::{
+        display_width::TTFParserDisplayWidth, whitespace::WhiteSpaceWordWrap, word_wrap::Wrap,
+    };
 
     pub fn read_font<'a>() -> Vec<u8> {
         let font_path: PathBuf = [
@@ -59,8 +64,9 @@ mod tests {
     fn nomicon() {
         let font_data = read_font();
         let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let display_width = TTFParserDisplayWidth::new(&font_face);
 
-        let wsww = WhiteSpaceWordWrap::new(20000, &font_face);
+        let wsww = WhiteSpaceWordWrap::new(20000, &display_width);
 
         let actual: Vec<&str> =
             "The nethermost caverns are not for the fathoming of eyes that see; for their marvels are strange and terrific. Cursed the ground where dead thoughts live new and oddly bodied, and evil the mind that is held by no head. Wisely did Ibn Schacabao say, that happy is the tomb where no wizard hath lain, and happy the town at night whose wizards are all ashes. For it is of old rumour that the soul of the devil-bought hastes not from his charnel clay, but fats and instructs the very worm that gnaws; till out of corruption horrid life springs, and the dull scavengers of earth wax crafty to vex it and swell monstrous to plague it. Great holes are digged where earth's pores ought to suffice, and things have learnt to walk that ought to crawl.".wrap(&wsww).collect();

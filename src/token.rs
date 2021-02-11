@@ -1,6 +1,4 @@
-use ttf_parser::Face;
-
-use crate::char_width::WithCharWidth;
+use crate::display_width::DisplayWidth;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Kind {
@@ -23,7 +21,7 @@ impl Kind {
 ///
 /// `Optional` tokens may be omitted from lines if they occur at the beginning or end of a line.
 /// `Newline` tokens cause a newline.
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub enum TokenKind<'a> {
     /// The token must be used.
     Required(Token<'a>),
@@ -48,6 +46,14 @@ impl<'a> TokenKind<'a> {
         matches!(self, TokenKind::Newline(_))
     }
 
+    pub fn width(&self) -> u32 {
+        match self {
+            TokenKind::Required(token) => token.width,
+            TokenKind::Optional(token) => token.width,
+            TokenKind::Newline(token) => token.width,
+        }
+    }
+
     pub fn into_token(self) -> Token<'a> {
         match self {
             TokenKind::Required(token) | TokenKind::Optional(token) | TokenKind::Newline(token) => {
@@ -66,8 +72,10 @@ impl<'a> TokenKind<'a> {
 }
 
 /// A Token is a portion of a &str
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, Debug)]
 pub struct Token<'a> {
+    pub display_width: &'a dyn DisplayWidth,
+
     /// Token points to data in this &str
     pub text: &'a str,
 
@@ -79,32 +87,24 @@ pub struct Token<'a> {
 
     /// The width of the token for the given font
     pub width: u32,
-
-    /// The width of each char
-    pub widths: Vec<u16>,
 }
 
 impl<'a> Token<'a> {
     /// Creates a new token for the whole `&str` with the given `kind` and `font_face`.
-    pub fn new(text: &'a str, font_face: &'a Face<'a>) -> Self {
-        let widths: Vec<u16> = text
-            .with_char_width(font_face)
-            .map(|char_width| char_width.display_width)
-            .collect();
-
-        let width = widths.iter().copied().map(u32::from).sum();
+    pub fn new(text: &'a str, display_width: &'a dyn DisplayWidth) -> Self {
+        let width = display_width.measure_str(text);
 
         Self {
+            display_width,
             text,
             start: 0,
             end: text.len(),
             width,
-            widths,
         }
     }
 
     /// Subdivides the token at `display_width`.
-    pub fn split_at(self, display_width: u32) -> (Option<Token<'a>>, Option<Token<'a>>) {
+    pub fn split_at(&self, display_width: u32) -> (Option<Token<'a>>, Option<Token<'a>>) {
         // Should never happen...
         if self.start == self.end {
             return (None, None);
@@ -112,18 +112,16 @@ impl<'a> Token<'a> {
 
         // Optimize the case where the token fits in the display_width
         if self.width < display_width {
-            return (Some(self), None);
+            return (Some(self.clone()), None);
         }
 
         let mut head_width: u32 = 0;
         let mut index = 0;
 
-        let mut char_widths = self
-            .text
-            .chars()
-            .zip(self.widths.iter().copied().map(u32::from));
+        let mut chars = self.text.chars();
 
-        while let Some((ch, ch_display_width)) = char_widths.next() {
+        while let Some(ch) = chars.next() {
+            let ch_display_width = self.display_width.measure_char(ch);
             let next_width = head_width + u32::from(ch_display_width);
 
             if next_width > display_width {
@@ -136,11 +134,11 @@ impl<'a> Token<'a> {
 
         // Could not find any chars that fit in the display_width
         if head_width == 0 {
-            return (None, Some(self));
+            return (None, Some(self.clone()));
         }
 
         let mut head = self.clone();
-        let mut tail = self;
+        let mut tail = self.clone();
 
         head.end = head.start + index;
         head.width = head_width;
@@ -160,14 +158,19 @@ impl<'a> std::fmt::Display for Token<'a> {
 
 #[cfg(test)]
 mod tests {
+    use ttf_parser::Face;
+
+    use crate::display_width::TTFParserDisplayWidth;
+
     use super::*;
 
     #[test]
     fn full_width() {
         let font_data = crate::tests::read_font();
         let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let display_width = TTFParserDisplayWidth::new(&font_face);
 
-        let token = Token::new("1234567890", &font_face);
+        let token = Token::new("1234567890", &display_width);
 
         let (head, tail) = token.split_at(1_000_000);
         assert_eq!("1234567890", head.unwrap().to_string());
@@ -178,8 +181,9 @@ mod tests {
     fn too_narrow() {
         let font_data = crate::tests::read_font();
         let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let display_width = TTFParserDisplayWidth::new(&font_face);
 
-        let token = Token::new("1234567890", &font_face);
+        let token = Token::new("1234567890", &display_width);
 
         // the number 1 is much larger than the display width of 100
         let (head, tail) = token.split_at(100);
@@ -191,8 +195,9 @@ mod tests {
     fn split_even() {
         let font_data = crate::tests::read_font();
         let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let display_width = TTFParserDisplayWidth::new(&font_face);
 
-        let token = Token::new("1234567890", &font_face);
+        let token = Token::new("1234567890", &display_width);
 
         let (head, tail) = token.split_at(6000);
         assert_eq!("12345", head.unwrap().to_string());
