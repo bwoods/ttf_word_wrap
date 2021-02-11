@@ -12,7 +12,7 @@ impl Kind {
         match self {
             Kind::Required => TokenKind::Required(token),
             Kind::Optional => TokenKind::Optional(token),
-            Kind::Newline => TokenKind::Newline(token),
+            Kind::Newline => TokenKind::Newline(Some(token)),
         }
     }
 }
@@ -30,7 +30,7 @@ pub enum TokenKind {
     Optional(Token),
 
     /// The token causes a newline
-    Newline(Token),
+    Newline(Option<Token>),
 }
 
 impl TokenKind {
@@ -50,15 +50,15 @@ impl TokenKind {
         match self {
             TokenKind::Required(token) => token.display_width,
             TokenKind::Optional(token) => token.display_width,
-            TokenKind::Newline(token) => token.display_width,
+            TokenKind::Newline(Some(token)) => token.display_width,
+            TokenKind::Newline(None) => 0,
         }
     }
 
-    pub fn into_token(self) -> Token {
+    pub fn into_token(self) -> Option<Token> {
         match self {
-            TokenKind::Required(token) | TokenKind::Optional(token) | TokenKind::Newline(token) => {
-                token
-            }
+            TokenKind::Required(token) | TokenKind::Optional(token) => Some(token),
+            TokenKind::Newline(token) => token,
         }
     }
 

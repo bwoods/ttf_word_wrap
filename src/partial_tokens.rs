@@ -65,12 +65,13 @@ where
     ) -> (Option<TokenKind>, Option<TokenKind>) {
         let kind = token_kind.kind();
 
-        // Newlines pass though
-        if token_kind.is_newline() {
-            return (Some(token_kind), None);
-        }
-
-        let token = token_kind.into_token();
+        let token = match token_kind {
+            TokenKind::Required(token) | TokenKind::Optional(token) => token,
+            newline @ TokenKind::Newline(_) => {
+                // Newlines pass though
+                return (Some(newline), None);
+            }
+        };
 
         if token.display_width > self.max_width {
             // If the word is wider than the max_width we break it anywhere
@@ -154,11 +155,11 @@ mod tests {
             .with_partial_tokens(10000, text, &measure);
 
         // get a few tokens
-        let token = partials.next(3000).unwrap().into_token();
+        let token = partials.next(3000).unwrap().into_token().unwrap();
         assert_eq!("ao", token.as_str(text));
 
         // a full line width
-        let token = partials.next(10000).unwrap().into_token();
+        let token = partials.next(10000).unwrap().into_token().unwrap();
         assert_eq!("euaoeuao", token.as_str(text));
 
         // not enough room for a character
@@ -179,7 +180,7 @@ mod tests {
             .with_partial_tokens(20000, text, &measure);
 
         //
-        let token = partials.next(10000).unwrap().into_token();
+        let token = partials.next(10000).unwrap().into_token().unwrap();
         assert_eq!("aoeu", token.as_str(text));
 
         // get a few tokens
@@ -187,7 +188,63 @@ mod tests {
         assert!(matches!(TokenKind::Newline, _token_kind));
 
         // a full line width
-        let token = partials.next(10000).unwrap().into_token();
+        let token = partials.next(10000).unwrap().into_token().unwrap();
         assert_eq!("aoeu", token.as_str(text));
+    }
+
+    #[test]
+    fn peek_next() {
+        let font_data = crate::tests::read_font();
+        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let measure = TTFParserMeasure::new(&font_face);
+
+        let text = "\naoeu";
+        let mut partials = text
+            .with_char_width(&measure)
+            .tokenize_white_space(&measure)
+            .with_partial_tokens(20000, text, &measure);
+
+        let token = partials.peek(3000).unwrap();
+        assert!(token.is_newline());
+
+        let token = partials.next(20000).unwrap();
+        assert!(token.is_newline());
+
+        let token = partials.peek(20000).unwrap().into_token().unwrap();
+        assert_eq!("aoeu", token.as_str(text));
+
+        let token = partials.next(20000).unwrap().into_token().unwrap();
+        assert_eq!("aoeu", token.as_str(text));
+
+        let token = partials.peek(15000);
+        assert!(token.is_none());
+
+        let token = partials.next(15000);
+        assert!(token.is_none());
+    }
+
+    #[test]
+    fn peek_peek() {
+        let font_data = crate::tests::read_font();
+        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let measure = TTFParserMeasure::new(&font_face);
+
+        let text = "\naoeu";
+        let mut partials = text
+            .with_char_width(&measure)
+            .tokenize_white_space(&measure)
+            .with_partial_tokens(20000, text, &measure);
+
+        let token = partials.peek(3000).unwrap();
+        assert!(token.is_newline());
+
+        let token = partials.peek(3000).unwrap();
+        assert!(token.is_newline());
+
+        let token = partials.peek(3000).unwrap();
+        assert!(token.is_newline());
+
+        let token = partials.peek(3000).unwrap();
+        assert!(token.is_newline());
     }
 }

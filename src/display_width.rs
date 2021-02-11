@@ -68,4 +68,15 @@ mod tests {
         let width = dw.char(text.chars().next().unwrap());
         assert_eq!(width, 1114);
     }
+
+    #[test]
+    fn caverns() {
+        let font_data = crate::tests::read_font();
+        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let dw = TTFParserMeasure::new(&font_face);
+
+        let text = "caverns are not for the";
+        let width = dw.str(text);
+        assert_eq!(width, 20483);
+    }
 }
