@@ -3,15 +3,16 @@ use std::fmt::Formatter;
 use crate::{partial_tokens::PartialTokens, token::TokenKind};
 
 pub trait Lines<T> {
-    fn lines(self, max_width: u32) -> LineIterator<T>;
+    fn lines<'a>(self, text: &'a str, max_width: u32) -> LineIterator<'a, T>;
 }
 
-impl<'a, T> Lines<T> for T
+impl<T> Lines<T> for T
 where
-    T: PartialTokens<Item = TokenKind<'a>> + 'a,
+    T: PartialTokens<Item = TokenKind>,
 {
-    fn lines(self, max_width: u32) -> LineIterator<T> {
+    fn lines<'a>(self, text: &'a str, max_width: u32) -> LineIterator<'a, T> {
         LineIterator {
+            text,
             max_width,
             tokens: self,
         }
@@ -20,12 +21,13 @@ where
 
 /// Provides lines as `&str`
 #[derive(Clone, PartialEq)]
-pub struct LineIterator<T> {
+pub struct LineIterator<'a, T> {
+    text: &'a str,
     max_width: u32,
     tokens: T,
 }
 
-impl<T> std::fmt::Debug for LineIterator<T>
+impl<'a, T> std::fmt::Debug for LineIterator<'a, T>
 where
     T: std::fmt::Debug,
 {
@@ -36,17 +38,17 @@ where
     }
 }
 
-impl<'a, T> Iterator for LineIterator<T>
+impl<'a, T> Iterator for LineIterator<'a, T>
 where
-    T: PartialTokens<Item = TokenKind<'a>> + 'a,
+    T: PartialTokens<Item = TokenKind> + 'a,
 {
     type Item = &'a str;
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut width_remaining = self.max_width;
-        let mut start_token: Option<TokenKind<'a>> = None;
-        let mut last_token: Option<TokenKind<'a>> = None;
-        let mut next_to_last_token: Option<TokenKind<'a>> = None;
+        let mut start_token: Option<TokenKind> = None;
+        let mut last_token: Option<TokenKind> = None;
+        let mut next_to_last_token: Option<TokenKind> = None;
 
         // Take tokens until there is no more space left (or the next token doesn't fit)
         while let Some(token_kind) = self.tokens.next(width_remaining) {
@@ -64,7 +66,7 @@ where
             let token = token_kind.into_token();
 
             // record the width
-            width_remaining -= token.width;
+            width_remaining -= token.display_width;
 
             if start_token.is_none() {
                 // Keep track of the first token
@@ -90,9 +92,9 @@ where
         ) {
             (None, None) => None,
             (None, Some(_)) => unreachable!(),
-            (Some(token), None) => Some(&token.text[token.start..token.end]),
+            (Some(token), None) => Some(&self.text[token.start..token.end]),
             (Some(start_token), Some(end_token)) => {
-                Some(&start_token.text[start_token.start..end_token.end])
+                Some(&self.text[start_token.start..end_token.end])
             }
         }
     }
@@ -103,7 +105,7 @@ mod tests {
     use ttf_parser::Face;
 
     use crate::{
-        char_width::WithCharWidth, display_width::TTFParserDisplayWidth,
+        char_width::WithCharWidth, display_width::TTFParserMeasure,
         partial_tokens::WithPartialTokens, whitespace::TokenizeWhiteSpace,
     };
 
@@ -113,14 +115,14 @@ mod tests {
     fn too_narrow() {
         let font_data = crate::tests::read_font();
         let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
-        let display_width = TTFParserDisplayWidth::new(&font_face);
+        let measure = TTFParserMeasure::new(&font_face);
 
         let text = "1234567890";
         let mut lines = text
-            .with_char_width(&display_width)
-            .tokenize_white_space(&display_width)
-            .with_partial_tokens(5000)
-            .lines(5000);
+            .with_char_width(&measure)
+            .tokenize_white_space(&measure)
+            .with_partial_tokens(5000, text, &measure)
+            .lines(text, 5000);
 
         let token = lines.next().unwrap();
         assert_eq!("1234", token);
@@ -136,14 +138,14 @@ mod tests {
     fn with_newlines() {
         let font_data = crate::tests::read_font();
         let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
-        let display_width = TTFParserDisplayWidth::new(&font_face);
+        let measure = TTFParserMeasure::new(&font_face);
 
         let text = "123\n456\r\n7890";
         let mut lines = text
-            .with_char_width(&display_width)
-            .tokenize_white_space(&display_width)
-            .with_partial_tokens(5000)
-            .lines(5000);
+            .with_char_width(&measure)
+            .tokenize_white_space(&measure)
+            .with_partial_tokens(5000, text, &measure)
+            .lines(text, 5000);
 
         let token = lines.next().unwrap();
         assert_eq!("123", token);

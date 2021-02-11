@@ -4,9 +4,9 @@ use crate::{partial_tokens::PartialTokens, token::TokenKind};
 
 /// Provides lines as `&str`
 #[derive(Clone)]
-pub struct LineWidthNewlineIterator<'a, T>
+pub struct LineWidthNewlineIterator<T>
 where
-    T: PartialTokens<Item = TokenKind<'a>> + 'a,
+    T: PartialTokens<Item = TokenKind>,
 {
     /// Maximum display width for the lines
     max_width: u32,
@@ -19,12 +19,12 @@ where
 
     /// We need the previous token to create TokenKind::Newline
     /// `previous_token` is `None` if the iterator is at the beginning of a line.
-    previous_token: Option<TokenKind<'a>>,
+    previous_token: Option<TokenKind>,
 }
 
-impl<'a, T> LineWidthNewlineIterator<'a, T>
+impl<T> LineWidthNewlineIterator<T>
 where
-    T: PartialTokens<Item = TokenKind<'a>> + 'a,
+    T: PartialTokens<Item = TokenKind>,
 {
     pub fn newline(&mut self) {
         self.width_remaining = self.max_width;
@@ -32,10 +32,10 @@ where
     }
 }
 
-impl<'a, T> std::fmt::Debug for LineWidthNewlineIterator<'a, T>
+impl<T> std::fmt::Debug for LineWidthNewlineIterator<T>
 where
     T: std::fmt::Debug,
-    T: PartialTokens<Item = TokenKind<'a>> + 'a,
+    T: PartialTokens<Item = TokenKind>,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TokenWrapIterator")
@@ -44,11 +44,11 @@ where
     }
 }
 
-impl<'a, T> Iterator for LineWidthNewlineIterator<'a, T>
+impl<T> Iterator for LineWidthNewlineIterator<T>
 where
-    T: PartialTokens<Item = TokenKind<'a>> + 'a,
+    T: PartialTokens<Item = TokenKind>,
 {
-    type Item = TokenKind<'a>;
+    type Item = TokenKind;
 
     fn next(&mut self) -> Option<Self::Item> {
         // if next is newline, return it and reset()

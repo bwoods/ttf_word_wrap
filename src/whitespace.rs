@@ -2,7 +2,7 @@ use std::{char, iter::Peekable};
 
 use crate::{
     char_width::{CharWidth, CharWidthIterator, WithCharWidth},
-    display_width::DisplayWidth,
+    display_width::Measure,
     line::{LineIterator, Lines},
     partial_tokens::{PartialTokensIterator, WithPartialTokens},
     token::Token,
@@ -31,20 +31,16 @@ impl From<&char> for State {
 
 pub trait TokenizeWhiteSpace<'a, T>
 where
-    T: Iterator<Item = CharWidth<'a>> + Clone,
+    T: Iterator<Item = CharWidth> + Clone,
 {
-    fn tokenize_white_space(self, display_width: &'a dyn DisplayWidth)
-        -> WhiteSpaceIterator<'a, T>;
+    fn tokenize_white_space(self, display_width: &'a dyn Measure) -> WhiteSpaceIterator<'a, T>;
 }
 
 impl<'a, T> TokenizeWhiteSpace<'a, T> for T
 where
-    T: Iterator<Item = CharWidth<'a>> + Clone,
+    T: Iterator<Item = CharWidth> + Clone,
 {
-    fn tokenize_white_space(
-        self,
-        display_width: &'a dyn DisplayWidth,
-    ) -> WhiteSpaceIterator<'a, T> {
+    fn tokenize_white_space(self, display_width: &'a dyn Measure) -> WhiteSpaceIterator<'a, T> {
         WhiteSpaceIterator::new(self.peekable(), display_width)
     }
 }
@@ -52,39 +48,38 @@ where
 #[derive(Clone, Debug)]
 pub struct WhiteSpaceIterator<'a, T>
 where
-    T: Iterator<Item = CharWidth<'a>> + Clone,
+    T: Iterator<Item = CharWidth> + Clone,
 {
     index: usize,
     chars: Peekable<T>,
-    display_width: &'a dyn DisplayWidth,
+    measure: &'a dyn Measure,
 }
 
 impl<'a, T> WhiteSpaceIterator<'a, T>
 where
-    T: Iterator<Item = CharWidth<'a>> + Clone,
+    T: Iterator<Item = CharWidth> + Clone,
 {
-    pub fn new(chars: Peekable<T>, display_width: &'a dyn DisplayWidth) -> Self {
+    pub fn new(chars: Peekable<T>, display_width: &'a dyn Measure) -> Self {
         Self {
             chars,
             index: 0,
-            display_width,
+            measure: display_width,
         }
     }
 }
 
 impl<'a, T> Iterator for WhiteSpaceIterator<'a, T>
 where
-    T: Iterator<Item = CharWidth<'a>> + Clone,
+    T: Iterator<Item = CharWidth> + Clone,
 {
-    type Item = TokenKind<'a>;
+    type Item = TokenKind;
 
     fn next(&mut self) -> Option<Self::Item> {
         // Get the 'mode' for the next `Span` whitespace or not
         // will return None if there is no more text
         let char_width = self.chars.peek()?;
-        let text = char_width.text;
         let state = State::from(&char_width.ch);
-        let display_width = self.display_width;
+        let display_width = self.measure;
 
         // keep track of the start of the span
         let start = self.index as usize;
@@ -112,11 +107,9 @@ where
         self.index = end;
 
         let token = Token {
-            display_width,
-            text,
             start,
             end,
-            width: total_width,
+            display_width: total_width,
         };
 
         match state {
@@ -132,44 +125,43 @@ where
 #[derive(Debug)]
 pub struct WhiteSpaceWordWrap<'fnt> {
     max_width: u32,
-    display_width: &'fnt dyn DisplayWidth,
+    measure: &'fnt dyn Measure,
 }
 
 impl<'fnt> WhiteSpaceWordWrap<'fnt> {
     /// Creates a new `WhiteSpaceWordWrap`
     ///
     /// Will wrap at `max_width` and measure the glyphs using `font_face`
-    pub fn new(max_width: u32, display_width: &'fnt dyn DisplayWidth) -> Self {
-        Self {
-            max_width,
-            display_width,
-        }
+    pub fn new(max_width: u32, measure: &'fnt dyn Measure) -> Self {
+        Self { max_width, measure }
     }
 }
 
-impl<'fnt, 'txt: 'fnt> WordWrap<'fnt, 'txt> for WhiteSpaceWordWrap<'fnt> {
+impl<'m, 'txt: 'm> WordWrap<'m, 'txt> for WhiteSpaceWordWrap<'m> {
     type Iterator = LineIterator<
-        PartialTokensIterator<'fnt, WhiteSpaceIterator<'fnt, CharWidthIterator<'fnt>>>,
+        'txt,
+        PartialTokensIterator<'m, WhiteSpaceIterator<'m, CharWidthIterator<'m>>>,
     >;
 
     fn word_wrap(&self, text: &'txt str) -> Self::Iterator {
-        text.with_char_width(self.display_width)
-            .tokenize_white_space(self.display_width)
-            .with_partial_tokens(self.max_width)
-            .lines(self.max_width)
+        text.with_char_width(self.measure)
+            .tokenize_white_space(self.measure)
+            .with_partial_tokens(self.max_width, text, self.measure)
+            .lines(text, self.max_width)
     }
 }
 
-impl<'fnt, 'txt: 'fnt> WordWrapWithPosition<'fnt, 'txt> for WhiteSpaceWordWrap<'fnt> {
+impl<'m, 'txt: 'm> WordWrapWithPosition<'m, 'txt> for WhiteSpaceWordWrap<'m> {
     type Iterator = LineIterator<
-        PartialTokensIterator<'fnt, WhiteSpaceIterator<'fnt, CharWidthIterator<'fnt>>>,
+        'txt,
+        PartialTokensIterator<'m, WhiteSpaceIterator<'m, CharWidthIterator<'m>>>,
     >;
 
-    fn word_wrap_with_position(&'fnt self, text: &'txt str) -> Self::Iterator {
-        text.with_char_width(self.display_width)
-            .tokenize_white_space(self.display_width)
-            .with_partial_tokens(self.max_width)
-            .lines(self.max_width)
+    fn word_wrap_with_position(&'m self, text: &'txt str) -> Self::Iterator {
+        text.with_char_width(self.measure)
+            .tokenize_white_space(self.measure)
+            .with_partial_tokens(self.max_width, text, self.measure)
+            .lines(text, self.max_width)
     }
 }
 
@@ -178,7 +170,7 @@ mod tests {
 
     use ttf_parser::Face;
 
-    use crate::{char_width::WithCharWidth, display_width::TTFParserDisplayWidth};
+    use crate::{char_width::WithCharWidth, display_width::TTFParserMeasure};
 
     use super::*;
 
@@ -186,7 +178,7 @@ mod tests {
     fn one_word() {
         let font_data = crate::tests::read_font();
         let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
-        let display_width = TTFParserDisplayWidth::new(&font_face);
+        let display_width = TTFParserMeasure::new(&font_face);
 
         let text = "word";
         let mut iter = WhiteSpaceIterator::new(
@@ -194,7 +186,7 @@ mod tests {
             &display_width,
         );
 
-        let words: Vec<String> = iter.clone().map(|t| t.into_token().to_string()).collect();
+        let words: Vec<&str> = iter.clone().map(|t| t.into_token().as_str(text)).collect();
         assert_eq!(words, vec!["word"]);
 
         assert!(matches!(iter.next(), Some(TokenKind::Required(_))));
@@ -204,7 +196,7 @@ mod tests {
     fn begin_rn() {
         let font_data = crate::tests::read_font();
         let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
-        let display_width = TTFParserDisplayWidth::new(&font_face);
+        let display_width = TTFParserMeasure::new(&font_face);
 
         let text = "\r\na\n";
         let mut iter = WhiteSpaceIterator::new(
@@ -212,7 +204,7 @@ mod tests {
             &display_width,
         );
 
-        let words: Vec<String> = iter.clone().map(|t| t.into_token().to_string()).collect();
+        let words: Vec<&str> = iter.clone().map(|t| t.into_token().as_str(text)).collect();
         assert_eq!(words, vec!["\r\n", "a", "\n"]);
 
         assert!(matches!(iter.next(), Some(TokenKind::Newline(_))));
@@ -224,7 +216,7 @@ mod tests {
     fn newline_breaks_ws() {
         let font_data = crate::tests::read_font();
         let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
-        let display_width = TTFParserDisplayWidth::new(&font_face);
+        let display_width = TTFParserMeasure::new(&font_face);
 
         let text = "  \n  ";
         let mut iter = WhiteSpaceIterator::new(
@@ -232,7 +224,7 @@ mod tests {
             &display_width,
         );
 
-        let words: Vec<String> = iter.clone().map(|t| t.into_token().to_string()).collect();
+        let words: Vec<&str> = iter.clone().map(|t| t.into_token().as_str(text)).collect();
         assert_eq!(words, vec!["  ", "\n", "  "]);
 
         assert!(matches!(iter.next(), Some(TokenKind::Optional(_))));
@@ -244,7 +236,7 @@ mod tests {
     fn mixed() {
         let font_data = crate::tests::read_font();
         let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
-        let display_width = TTFParserDisplayWidth::new(&font_face);
+        let display_width = TTFParserMeasure::new(&font_face);
 
         let text = "at newline\n  some thing";
         let mut iter = WhiteSpaceIterator::new(
@@ -252,7 +244,7 @@ mod tests {
             &display_width,
         );
 
-        let words: Vec<String> = iter.clone().map(|t| t.into_token().to_string()).collect();
+        let words: Vec<&str> = iter.clone().map(|t| t.into_token().as_str(text)).collect();
         assert_eq!(
             words,
             vec!["at", " ", "newline", "\n", "  ", "some", " ", "thing"]

@@ -5,15 +5,15 @@
 //!
 //!```
 //! use ttf_parser::Face;
-//! use ttf_word_wrap::{Wrap, WhiteSpaceWordWrap, TTFParserDisplayWidth};
+//! use ttf_word_wrap::{Wrap, WhiteSpaceWordWrap, TTFParserMeasure};
 //!
 //! // Load a TrueType font using `ttf_parser`
 //! let font_data = std::fs::read("./test_fonts/Roboto-Regular.ttf").expect("TTF should exist");
 //! let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
-//! let display_width = TTFParserDisplayWidth::new(&font_face);
+//! let measure = TTFParserMeasure::new(&font_face);
 //!
 //! // Set up wrapping options, split on whitespace:
-//! let word_wrap = WhiteSpaceWordWrap::new(20000, &display_width);
+//! let word_wrap = WhiteSpaceWordWrap::new(20000, &measure);
 //!
 //! // Use the `Wrap` trait and split the `&str`
 //! let poem = "Mary had a little lamb whose fleece was white as snow";
@@ -34,7 +34,7 @@ mod token;
 mod whitespace;
 mod word_wrap;
 
-pub use display_width::{DisplayWidth, TTFParserDisplayWidth};
+pub use display_width::{Measure, TTFParserMeasure};
 pub use position::Position;
 pub use whitespace::WhiteSpaceWordWrap;
 pub use word_wrap::Wrap;
@@ -45,9 +45,7 @@ mod tests {
 
     use ttf_parser::Face;
 
-    use crate::{
-        display_width::TTFParserDisplayWidth, whitespace::WhiteSpaceWordWrap, word_wrap::Wrap,
-    };
+    use crate::{display_width::TTFParserMeasure, whitespace::WhiteSpaceWordWrap, word_wrap::Wrap};
 
     pub fn read_font<'a>() -> Vec<u8> {
         let font_path: PathBuf = [
@@ -64,7 +62,7 @@ mod tests {
     fn nomicon() {
         let font_data = read_font();
         let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
-        let display_width = TTFParserDisplayWidth::new(&font_face);
+        let display_width = TTFParserMeasure::new(&font_face);
 
         let wsww = WhiteSpaceWordWrap::new(20000, &display_width);
 
