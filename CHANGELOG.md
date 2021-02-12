@@ -1,3 +1,9 @@
+# 0.2.2
+
+#### Fixed
+
+Fuzzer found a bug in Token::split_at(), it has been fixed.
+
 # 0.2.1
 
 #### Fixed
