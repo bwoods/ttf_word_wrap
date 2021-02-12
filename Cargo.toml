@@ -1,6 +1,6 @@
 [package]
 name = "ttf_word_wrap"
-version = "0.2.2-alpha.0"
+version = "0.2.2"
 authors = ["Benjamin Halsted <bg@hlstd.com>"]
 edition = "2018"
 license = "MIT"
