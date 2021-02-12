@@ -115,6 +115,8 @@ mod tests {
 
         let token = lines.next().unwrap();
         assert_eq!("90", token);
+
+        assert!(lines.next().is_none());
     }
 
     #[test]
@@ -139,6 +141,8 @@ mod tests {
 
         let token = lines.next().unwrap();
         assert_eq!("7890", token);
+
+        assert!(lines.next().is_none());
     }
 
     #[test]
@@ -211,5 +215,7 @@ mod tests {
 
         let token = lines.next().unwrap();
         assert_eq!("the", token);
+
+        assert!(lines.next().is_none());
     }
 }

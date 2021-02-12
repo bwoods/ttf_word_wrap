@@ -20,6 +20,28 @@
 //! let lines: Vec<&str> = poem.wrap(&word_wrap).collect();
 //! assert_eq!(lines[0], "Mary had a little lamb");
 //!```
+//!
+//! A more complicated example that returns `Position`s of the glyphs.
+//!
+//!```
+//! use ttf_parser::Face;
+//! use ttf_word_wrap::{WrapWithPosition, WhiteSpaceWordWrap, TTFParserMeasure, Position};
+//!
+//! // Load a TrueType font using `ttf_parser`
+//! let font_data = std::fs::read("./test_fonts/Roboto-Regular.ttf").expect("TTF should exist");
+//! let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+//! let measure = TTFParserMeasure::new(&font_face);
+//!
+//! // Set up wrapping options, split on whitespace:
+//! let word_wrap = WhiteSpaceWordWrap::new(20000, &measure);
+//!
+//! // Use the `Wrap` trait and split the `&str`
+//! let poem = "Mary had a little lamb whose fleece was white as snow";
+//! let positions: Vec<Position> = poem.wrap_with_position(&word_wrap).collect();
+//!
+//! // offset is in the unit (em) of the TTFParserMeasure.
+//! assert_eq!(positions[0], Position { ch: 'M', line: 0, offset: 0 });
+//!```
 #![warn(missing_docs, missing_debug_implementations, rust_2018_idioms)]
 #![doc(test(attr(deny(rust_2018_idioms, warnings))))]
 #![doc(test(attr(allow(unused_extern_crates, unused_variables))))]
@@ -32,12 +54,13 @@ mod partial_tokens;
 mod position;
 mod token;
 mod whitespace;
-mod word_wrap;
+mod whitespace_wordwrap;
+mod wordwrap;
 
 pub use display_width::{Measure, TTFParserMeasure};
 pub use position::Position;
-pub use whitespace::WhiteSpaceWordWrap;
-pub use word_wrap::Wrap;
+pub use whitespace_wordwrap::WhiteSpaceWordWrap;
+pub use wordwrap::{Wrap, WrapWithPosition};
 
 #[cfg(test)]
 mod tests {
@@ -45,7 +68,10 @@ mod tests {
 
     use ttf_parser::Face;
 
-    use crate::{display_width::TTFParserMeasure, whitespace::WhiteSpaceWordWrap, word_wrap::Wrap};
+    use crate::{
+        display_width::TTFParserMeasure, whitespace_wordwrap::WhiteSpaceWordWrap, wordwrap::Wrap,
+        Position, WrapWithPosition,
+    };
 
     pub fn read_font<'a>() -> Vec<u8> {
         let font_path: PathBuf = [
@@ -112,5 +138,55 @@ mod tests {
         ];
 
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn nomicon_positions() {
+        let font_data = read_font();
+        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let display_width = TTFParserMeasure::new(&font_face);
+
+        let wsww = WhiteSpaceWordWrap::new(20000, &display_width);
+
+        let mut positions = "The nethermost caverns are not for the fathoming of eyes that see;"
+            .wrap_with_position(&wsww);
+
+        let token = positions.next().unwrap();
+        assert_eq!(
+            Position {
+                ch: 'T',
+                line: 0,
+                offset: 0
+            },
+            token
+        );
+
+        // advance some
+        (0..30).for_each(|_| {
+            positions.next().unwrap();
+        });
+        let token = positions.next().unwrap();
+        assert_eq!(
+            Position {
+                ch: 'o',
+                line: 1,
+                offset: 15233
+            },
+            token
+        );
+
+        // advance some more
+        (0..30).for_each(|_| {
+            positions.next().unwrap();
+        });
+        let token = positions.next().unwrap();
+        assert_eq!(
+            Position {
+                ch: ';',
+                line: 3,
+                offset: 7313
+            },
+            token
+        );
     }
 }
