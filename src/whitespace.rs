@@ -142,6 +142,7 @@ mod tests {
         assert_eq!(words, vec!["word"]);
 
         assert!(matches!(iter.next(), Some(TokenKind::Required(_))));
+        assert!(iter.next().is_none());
     }
 
     #[test]
@@ -163,6 +164,7 @@ mod tests {
         assert!(matches!(iter.next(), Some(TokenKind::Newline(_))));
         assert!(matches!(iter.next(), Some(TokenKind::Newline(_))));
         assert!(matches!(iter.next(), Some(TokenKind::Newline(_))));
+        assert!(iter.next().is_none());
     }
 
     #[test]
@@ -183,6 +185,7 @@ mod tests {
         assert!(matches!(iter.next(), Some(TokenKind::Newline(_))));
         assert!(matches!(iter.next(), Some(TokenKind::Required(_))));
         assert!(matches!(iter.next(), Some(TokenKind::Newline(_))));
+        assert!(iter.next().is_none());
     }
 
     #[test]
@@ -203,6 +206,7 @@ mod tests {
         assert!(matches!(iter.next(), Some(TokenKind::Optional(_))));
         assert!(matches!(iter.next(), Some(TokenKind::Newline(_))));
         assert!(matches!(iter.next(), Some(TokenKind::Optional(_))));
+        assert!(iter.next().is_none());
     }
 
     #[test]
@@ -231,6 +235,7 @@ mod tests {
         assert!(matches!(iter.next(), Some(TokenKind::Required(_))));
         assert!(matches!(iter.next(), Some(TokenKind::Optional(_))));
         assert!(matches!(iter.next(), Some(TokenKind::Required(_))));
+        assert!(iter.next().is_none());
     }
 
     #[test]
@@ -253,5 +258,6 @@ mod tests {
         assert!(matches!(iter.next(), Some(TokenKind::Required(_))));
         assert!(matches!(iter.next(), Some(TokenKind::Newline(_))));
         assert!(matches!(iter.next(), Some(TokenKind::Required(_))));
+        assert!(iter.next().is_none());
     }
 }

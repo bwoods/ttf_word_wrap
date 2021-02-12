@@ -127,7 +127,7 @@ impl Token {
         let mut head_width: u32 = 0;
         let mut index = 0;
 
-        let mut chars = text.chars();
+        let mut chars = text[self.start..self.end].chars();
 
         while let Some(ch) = chars.next() {
             let ch_display_width = measure.char(ch);
@@ -212,5 +212,23 @@ mod tests {
         let (head, tail) = token.split_at(6000, text, &measure);
         assert_eq!("12345", head.unwrap().as_str(text));
         assert_eq!("67890", tail.unwrap().as_str(text));
+    }
+
+    #[test]
+    fn fuzz_wrap_1() {
+        let font_data = crate::tests::read_font();
+        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let measure = TTFParserMeasure::new(&font_face);
+
+        let text = "\r\n[wwwwwwwwwwwww";
+        let token = Token {
+            start: 2,
+            end: 16,
+            display_width: 20550,
+        };
+
+        let (head, tail) = token.split_at(20000, text, &measure);
+        assert_eq!("[wwwwwwwwwwww", head.unwrap().as_str(text));
+        assert_eq!("w", tail.unwrap().as_str(text));
     }
 }

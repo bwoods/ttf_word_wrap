@@ -1,0 +1,31 @@
+
+[package]
+name = "ttf_word_wrap-fuzz"
+version = "0.0.0"
+authors = ["Automatically generated"]
+publish = false
+edition = "2018"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.3"
+ttf-parser = "0.11.0"
+ttf_word_wrap = { path = ".." }
+
+# Prevent this from interfering with workspaces
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "wrap"
+path = "fuzz_targets/wrap.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "positions"
+path = "fuzz_targets/positions.rs"
+test = false
+doc = false
