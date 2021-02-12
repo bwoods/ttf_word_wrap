@@ -6,14 +6,15 @@ Can provide split lines or positions for each character.
 
 ```rust
 use ttf_parser::Face;
-use ttf_word_wrap::{Wrap, WhiteSpaceWordWrap};
+use ttf_word_wrap::{TTFParserMeasure, WhiteSpaceWordWrap, Wrap};
 
 // Load a TrueType font using `ttf_parser`
 let font_data = std::fs::read("./test_fonts/Roboto-Regular.ttf").expect("TTF should exist");
 let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+let measure = TTFParserMeasure::new(&font_face);
 
 // Set up wrapping options, split on whitespace:
-let word_wrap = WhiteSpaceWordWrap::new(20000, &font_face);
+let word_wrap = WhiteSpaceWordWrap::new(20000, &measure);
 
 // Use the `Wrap` trait and split the `&str`
 let poem = "Mary had a little lamb whose fleece was white as snow";
