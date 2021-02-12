@@ -1,6 +1,9 @@
 use std::iter::Peekable;
 
-use crate::{token::TokenKind, Measure};
+use crate::{
+    token::{Token, TokenKind},
+    Measure,
+};
 
 pub trait WithPartialTokens<T>
 where
@@ -34,13 +37,26 @@ where
     }
 }
 
-/*
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum PartialToken {
     Token(TokenKind),
     EndOfLine,
-    End,
 }
-*/
+
+impl PartialToken {
+    pub fn into_token(self) -> Option<Token> {
+        match self {
+            PartialToken::Token(token_kind) => token_kind.into_token(),
+            PartialToken::EndOfLine => None,
+        }
+    }
+    pub fn into_tokenkind(self) -> Option<TokenKind> {
+        match self {
+            PartialToken::Token(token_kind) => Some(token_kind),
+            PartialToken::EndOfLine => None,
+        }
+    }
+}
 
 pub trait PartialTokens {
     type Item;
@@ -104,9 +120,9 @@ impl<'a, T> PartialTokens for PartialTokensIterator<'a, T>
 where
     T: Iterator<Item = TokenKind>,
 {
-    type Item = TokenKind;
+    type Item = PartialToken;
 
-    fn next(&mut self, space_remaining: u32) -> Option<Self::Item> {
+    fn next(&mut self, space_remaining: u32) -> Option<PartialToken> {
         let head_tail = match self.partial.take() {
             Some(partial) => self.process_partial(partial, space_remaining),
             None => {
@@ -117,15 +133,18 @@ where
 
         // If there is a tail, preserve it, return the heads
         match head_tail {
-            (head, None) => head,
+            (head, None) => head.map(PartialToken::Token),
             (head, Some(tail)) => {
                 self.partial.replace(tail);
-                head
+                head.map_or_else(
+                    || Some(PartialToken::EndOfLine),
+                    |t| Some(PartialToken::Token(t)),
+                )
             }
         }
     }
 
-    fn peek(&mut self, space_remaining: u32) -> Option<Self::Item> {
+    fn peek(&mut self, space_remaining: u32) -> Option<PartialToken> {
         let head_tail = match self.partial.clone() {
             Some(partial) => self.process_partial(partial, space_remaining),
             None => {
@@ -134,9 +153,12 @@ where
             }
         };
 
-        // If there is a tail, preserve it, return the heads
         match head_tail {
-            (head, _) => head,
+            (head, None) => head.map(PartialToken::Token),
+            (head, Some(_)) => head.map_or_else(
+                || Some(PartialToken::EndOfLine),
+                |t| Some(PartialToken::Token(t)),
+            ),
         }
     }
 }
@@ -172,6 +194,15 @@ mod tests {
         assert_eq!("euaoeuao", token.as_str(text));
 
         // not enough room for a character
+        let token = partials.next(500).unwrap();
+        assert!(matches!(token, PartialToken::EndOfLine));
+
+        let token = partials.next(10000).unwrap().into_token().unwrap();
+        assert_eq!("euaoeaoe", token.as_str(text));
+
+        let token = partials.next(10000).unwrap().into_token().unwrap();
+        assert_eq!("u", token.as_str(text));
+
         let token = partials.next(500);
         assert!(token.is_none());
     }
@@ -213,10 +244,10 @@ mod tests {
             .tokenize_white_space(&measure)
             .with_partial_tokens(20000, text, &measure);
 
-        let token = partials.peek(3000).unwrap();
+        let token = partials.peek(3000).unwrap().into_tokenkind().unwrap();
         assert!(token.is_newline());
 
-        let token = partials.next(20000).unwrap();
+        let token = partials.next(20000).unwrap().into_tokenkind().unwrap();
         assert!(token.is_newline());
 
         let token = partials.peek(20000).unwrap().into_token().unwrap();
@@ -244,16 +275,16 @@ mod tests {
             .tokenize_white_space(&measure)
             .with_partial_tokens(20000, text, &measure);
 
-        let token = partials.peek(3000).unwrap();
+        let token = partials.peek(3000).unwrap().into_tokenkind().unwrap();
         assert!(token.is_newline());
 
-        let token = partials.peek(3000).unwrap();
+        let token = partials.peek(3000).unwrap().into_tokenkind().unwrap();
         assert!(token.is_newline());
 
-        let token = partials.peek(3000).unwrap();
+        let token = partials.peek(3000).unwrap().into_tokenkind().unwrap();
         assert!(token.is_newline());
 
-        let token = partials.peek(3000).unwrap();
+        let token = partials.peek(3000).unwrap().into_tokenkind().unwrap();
         assert!(token.is_newline());
     }
 }

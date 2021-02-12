@@ -94,6 +94,7 @@ impl Token {
         }
     }
 
+    /// Creates a new Token
     pub fn measure<T>(text: &str, measure: &T) -> Token
     where
         T: Measure,

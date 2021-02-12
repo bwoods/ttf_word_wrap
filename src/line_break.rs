@@ -1,7 +1,7 @@
 use std::fmt::Formatter;
 
 use crate::{
-    partial_tokens::PartialTokens,
+    partial_tokens::{PartialToken, PartialTokens},
     token::{Kind, TokenKind},
 };
 
@@ -12,7 +12,7 @@ pub trait AddNewlines<T> {
 
 impl<T> AddNewlines<T> for T
 where
-    T: PartialTokens<Item = TokenKind>,
+    T: PartialTokens<Item = PartialToken>,
 {
     fn add_newlines_at(self, max_width: u32) -> LineBreakIterator<T> {
         LineBreakIterator {
@@ -43,22 +43,18 @@ pub struct LineBreakIterator<T> {
 
 impl<T> LineBreakIterator<T>
 where
-    T: PartialTokens<Item = TokenKind>,
+    T: PartialTokens<Item = PartialToken>,
 {
     fn newline(&mut self) {
         self.width_remaining = self.max_width;
         self.previous_token_kind.take();
-    }
-
-    fn is_finished(&mut self) -> bool {
-        self.tokens.peek(self.max_width).is_none()
     }
 }
 
 impl<T> std::fmt::Debug for LineBreakIterator<T>
 where
     T: std::fmt::Debug,
-    T: PartialTokens<Item = TokenKind>,
+    T: PartialTokens<Item = PartialToken>,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TokenWrapIterator")
@@ -69,53 +65,59 @@ where
 
 impl<T> Iterator for LineBreakIterator<T>
 where
-    T: PartialTokens<Item = TokenKind>,
+    T: PartialTokens<Item = PartialToken>,
 {
     type Item = TokenKind;
 
     fn next(&mut self) -> Option<Self::Item> {
         // Take tokens until there is no more space left (or the next token doesn't fit)
-        while let Some(token_kind) = self.tokens.next(self.width_remaining) {
-            // Skip optional tokens at the beginning of a line
-            if self.previous_token_kind.is_none() && token_kind.is_optional() {
-                continue;
-            }
-
-            let token_kind = match token_kind {
-                TokenKind::Required(token) => TokenKind::Required(token),
-                TokenKind::Optional(token) => {
-                    // Only return the Optional token_kind if a Required one fits on the line after it
-                    let width_remaining = self.width_remaining - token.display_width;
-                    if self.tokens.peek(width_remaining).is_some() {
-                        TokenKind::Optional(token)
-                    } else {
-                        // The following token will not fit on the line, do not keep the current
-                        // optional token, replace it with a synthetic newline
-                        TokenKind::Newline(None)
+        while let Some(partial_token) = self.tokens.next(self.width_remaining) {
+            return match partial_token {
+                PartialToken::Token(token_kind) => {
+                    // Skip optional tokens at the beginning of a line
+                    if self.previous_token_kind.is_none() && token_kind.is_optional() {
+                        continue;
                     }
-                }
-                TokenKind::Newline(token) => {
-                    // All types of newlines pass through
-                    TokenKind::Newline(token)
-                }
-            };
 
-            if token_kind.is_newline() {
-                self.newline();
-            } else {
-                // token accepted, no longer at the start of a line
-                self.width_remaining -= token_kind.width();
-                self.previous_token_kind.replace(token_kind.kind());
+                    let token_kind = match token_kind {
+                        TokenKind::Required(token) => TokenKind::Required(token),
+                        TokenKind::Optional(token) => {
+                            // Only return the Optional token_kind if a Required one fits on the line after it
+                            let width_remaining = self.width_remaining - token.display_width;
+                            match self.tokens.peek(width_remaining) {
+                                Some(PartialToken::Token(_)) => TokenKind::Optional(token),
+                                None | Some(PartialToken::EndOfLine) => {
+                                    // The following token will not fit on the line, do not keep the current
+                                    // optional token, replace it with a synthetic newline
+                                    TokenKind::Newline(None)
+                                }
+                            }
+                        }
+                        TokenKind::Newline(token) => {
+                            // All types of newlines pass through
+                            TokenKind::Newline(token)
+                        }
+                    };
+
+                    if token_kind.is_newline() {
+                        self.newline();
+                    } else {
+                        // token accepted, no longer at the start of a line
+                        self.width_remaining -= token_kind.width();
+                        self.previous_token_kind.replace(token_kind.kind());
+                    }
+
+                    token_kind
+                }
+                PartialToken::EndOfLine => {
+                    self.newline();
+                    TokenKind::Newline(None)
+                }
             }
-            return Some(token_kind);
+            .into();
         }
 
-        if self.is_finished() {
-            None
-        } else {
-            self.newline();
-            Some(TokenKind::Newline(None))
-        }
+        None
     }
 }
 
@@ -259,7 +261,8 @@ mod tests {
             .iter()
             .for_each(|&expected| {
                 let token = tokens.next().unwrap().into_token().unwrap();
-                assert_eq!(token.as_str(text), expected);
+                let text = token.as_str(text);
+                assert_eq!(text, expected);
             });
 
         assert!(tokens.next().is_none());
