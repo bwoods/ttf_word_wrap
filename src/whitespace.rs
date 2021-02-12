@@ -1,6 +1,6 @@
 use std::{char, iter::Peekable};
 
-use crate::{char_width::CharWidth, display_width::Measure, token::Token, token::TokenKind};
+use crate::{char_width::CharWidth, measure::Measure, token::Token, token::TokenKind};
 
 #[derive(Copy, Clone, PartialEq)]
 enum State {
@@ -25,15 +25,15 @@ pub trait TokenizeWhiteSpace<'a, T>
 where
     T: Iterator<Item = CharWidth> + Clone,
 {
-    fn tokenize_white_space(self, display_width: &'a dyn Measure) -> WhiteSpaceIterator<'a, T>;
+    fn tokenize_white_space(self, measure: &'a dyn Measure) -> WhiteSpaceIterator<'a, T>;
 }
 
 impl<'a, T> TokenizeWhiteSpace<'a, T> for T
 where
     T: Iterator<Item = CharWidth> + Clone,
 {
-    fn tokenize_white_space(self, display_width: &'a dyn Measure) -> WhiteSpaceIterator<'a, T> {
-        WhiteSpaceIterator::new(self.peekable(), display_width)
+    fn tokenize_white_space(self, measure: &'a dyn Measure) -> WhiteSpaceIterator<'a, T> {
+        WhiteSpaceIterator::new(self.peekable(), measure)
     }
 }
 
@@ -122,7 +122,7 @@ mod tests {
 
     use ttf_parser::Face;
 
-    use crate::{char_width::WithCharWidth, display_width::TTFParserMeasure};
+    use crate::{char_width::WithCharWidth, measure::TTFParserMeasure};
 
     use super::*;
 
@@ -130,13 +130,10 @@ mod tests {
     fn one_word() {
         let font_data = crate::tests::read_font();
         let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
-        let display_width = TTFParserMeasure::new(&font_face);
+        let measure = TTFParserMeasure::new(&font_face);
 
         let text = "word";
-        let mut iter = WhiteSpaceIterator::new(
-            text.with_char_width(&display_width).peekable(),
-            &display_width,
-        );
+        let mut iter = WhiteSpaceIterator::new(text.with_char_width(&measure).peekable(), &measure);
 
         let words: Vec<&str> = iter
             .clone()
@@ -151,13 +148,10 @@ mod tests {
     fn sequential_newlines() {
         let font_data = crate::tests::read_font();
         let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
-        let display_width = TTFParserMeasure::new(&font_face);
+        let measure = TTFParserMeasure::new(&font_face);
 
         let text = "\r\n\n\r\n\n";
-        let mut iter = WhiteSpaceIterator::new(
-            text.with_char_width(&display_width).peekable(),
-            &display_width,
-        );
+        let mut iter = WhiteSpaceIterator::new(text.with_char_width(&measure).peekable(), &measure);
 
         let words: Vec<&str> = iter
             .clone()
@@ -175,13 +169,10 @@ mod tests {
     fn begin_rn() {
         let font_data = crate::tests::read_font();
         let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
-        let display_width = TTFParserMeasure::new(&font_face);
+        let measure = TTFParserMeasure::new(&font_face);
 
         let text = "\r\na\n";
-        let mut iter = WhiteSpaceIterator::new(
-            text.with_char_width(&display_width).peekable(),
-            &display_width,
-        );
+        let mut iter = WhiteSpaceIterator::new(text.with_char_width(&measure).peekable(), &measure);
 
         let words: Vec<&str> = iter
             .clone()
@@ -198,13 +189,10 @@ mod tests {
     fn newline_breaks_ws() {
         let font_data = crate::tests::read_font();
         let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
-        let display_width = TTFParserMeasure::new(&font_face);
+        let measure = TTFParserMeasure::new(&font_face);
 
         let text = "  \n  ";
-        let mut iter = WhiteSpaceIterator::new(
-            text.with_char_width(&display_width).peekable(),
-            &display_width,
-        );
+        let mut iter = WhiteSpaceIterator::new(text.with_char_width(&measure).peekable(), &measure);
 
         let words: Vec<&str> = iter
             .clone()
@@ -221,13 +209,10 @@ mod tests {
     fn mixed() {
         let font_data = crate::tests::read_font();
         let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
-        let display_width = TTFParserMeasure::new(&font_face);
+        let measure = TTFParserMeasure::new(&font_face);
 
         let text = "at newline\n  some thing";
-        let mut iter = WhiteSpaceIterator::new(
-            text.with_char_width(&display_width).peekable(),
-            &display_width,
-        );
+        let mut iter = WhiteSpaceIterator::new(text.with_char_width(&measure).peekable(), &measure);
 
         let words: Vec<&str> = iter
             .clone()
@@ -252,13 +237,10 @@ mod tests {
     fn with_newlines() {
         let font_data = crate::tests::read_font();
         let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
-        let display_width = TTFParserMeasure::new(&font_face);
+        let measure = TTFParserMeasure::new(&font_face);
 
         let text = "123\n456\r\n7890";
-        let mut iter = WhiteSpaceIterator::new(
-            text.with_char_width(&display_width).peekable(),
-            &display_width,
-        );
+        let mut iter = WhiteSpaceIterator::new(text.with_char_width(&measure).peekable(), &measure);
 
         let words: Vec<&str> = iter
             .clone()

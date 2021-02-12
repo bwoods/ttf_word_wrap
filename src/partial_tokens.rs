@@ -34,6 +34,14 @@ where
     }
 }
 
+/*
+pub enum PartialToken {
+    Token(TokenKind),
+    EndOfLine,
+    End,
+}
+*/
+
 pub trait PartialTokens {
     type Item;
 
@@ -41,6 +49,7 @@ pub trait PartialTokens {
     fn peek(&mut self, space_remaining: u32) -> Option<Self::Item>;
 }
 
+/// Splits tokens that are wider than the max_width
 #[derive(Clone, Debug)]
 pub struct PartialTokensIterator<'a, T>
 where
@@ -137,7 +146,7 @@ mod tests {
     use ttf_parser::Face;
 
     use crate::{
-        char_width::WithCharWidth, display_width::TTFParserMeasure, whitespace::TokenizeWhiteSpace,
+        char_width::WithCharWidth, measure::TTFParserMeasure, whitespace::TokenizeWhiteSpace,
     };
 
     use super::*;

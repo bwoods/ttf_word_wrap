@@ -1,4 +1,4 @@
-use crate::display_width::Measure;
+use crate::measure::Measure;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum Kind {

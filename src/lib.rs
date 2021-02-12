@@ -47,9 +47,9 @@
 #![doc(test(attr(allow(unused_extern_crates, unused_variables))))]
 
 mod char_width;
-mod display_width;
 mod line;
 mod line_break;
+mod measure;
 mod partial_tokens;
 mod position;
 mod token;
@@ -57,7 +57,7 @@ mod whitespace;
 mod whitespace_wordwrap;
 mod wordwrap;
 
-pub use display_width::{Measure, TTFParserMeasure};
+pub use measure::{Measure, TTFParserMeasure};
 pub use position::Position;
 pub use whitespace_wordwrap::WhiteSpaceWordWrap;
 pub use wordwrap::{Wrap, WrapWithPosition};
@@ -69,7 +69,7 @@ mod tests {
     use ttf_parser::Face;
 
     use crate::{
-        display_width::TTFParserMeasure, whitespace_wordwrap::WhiteSpaceWordWrap, wordwrap::Wrap,
+        measure::TTFParserMeasure, whitespace_wordwrap::WhiteSpaceWordWrap, wordwrap::Wrap,
         Position, WrapWithPosition,
     };
 
@@ -88,9 +88,9 @@ mod tests {
     fn nomicon() {
         let font_data = read_font();
         let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
-        let display_width = TTFParserMeasure::new(&font_face);
+        let measure = TTFParserMeasure::new(&font_face);
 
-        let wsww = WhiteSpaceWordWrap::new(20000, &display_width);
+        let wsww = WhiteSpaceWordWrap::new(20000, &measure);
 
         let actual: Vec<&str> =
             "The nethermost caverns are not for the fathoming of eyes that see; for their marvels are strange and terrific. Cursed the ground where dead thoughts live new and oddly bodied, and evil the mind that is held by no head. Wisely did Ibn Schacabao say, that happy is the tomb where no wizard hath lain, and happy the town at night whose wizards are all ashes. For it is of old rumour that the soul of the devil-bought hastes not from his charnel clay, but fats and instructs the very worm that gnaws; till out of corruption horrid life springs, and the dull scavengers of earth wax crafty to vex it and swell monstrous to plague it. Great holes are digged where earth's pores ought to suffice, and things have learnt to walk that ought to crawl.".wrap(&wsww).collect();
@@ -144,9 +144,9 @@ mod tests {
     fn nomicon_positions() {
         let font_data = read_font();
         let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
-        let display_width = TTFParserMeasure::new(&font_face);
+        let measure = TTFParserMeasure::new(&font_face);
 
-        let wsww = WhiteSpaceWordWrap::new(20000, &display_width);
+        let wsww = WhiteSpaceWordWrap::new(20000, &measure);
 
         let mut positions = "The nethermost caverns are not for the fathoming of eyes that see;"
             .wrap_with_position(&wsww);

@@ -87,7 +87,7 @@ mod tests {
     use ttf_parser::Face;
 
     use crate::{
-        char_width::WithCharWidth, display_width::TTFParserMeasure, line_break::AddNewlines,
+        char_width::WithCharWidth, line_break::AddNewlines, measure::TTFParserMeasure,
         partial_tokens::WithPartialTokens, whitespace::TokenizeWhiteSpace,
     };
 
