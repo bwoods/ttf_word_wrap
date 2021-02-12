@@ -46,7 +46,7 @@
 #![doc(test(attr(deny(rust_2018_idioms, warnings))))]
 #![doc(test(attr(allow(unused_extern_crates, unused_variables))))]
 
-mod char_width;
+mod grapheme_width;
 mod line;
 mod line_break;
 mod measure;

@@ -1,3 +1,8 @@
+# 0.3.0
+
+Fixed a bug when tokenizing "y̆".
+Using `unicode_segmentation` to segment graphemes.
+
 # 0.2.2
 
 #### Fixed

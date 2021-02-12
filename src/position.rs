@@ -109,11 +109,28 @@ mod tests {
     use ttf_parser::Face;
 
     use crate::{
-        char_width::WithCharWidth, line_break::AddNewlines, partial_tokens::WithPartialTokens,
-        whitespace::TokenizeWhiteSpace, TTFParserMeasure,
+        grapheme_width::WithGraphemeWidth, line_break::AddNewlines,
+        partial_tokens::WithPartialTokens, whitespace::TokenizeWhiteSpace, TTFParserMeasure,
     };
 
     use super::*;
+
+    #[test]
+    fn no_glyphs() {
+        let font_data = crate::tests::read_font();
+        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let measure = TTFParserMeasure::new(&font_face);
+
+        let text = "";
+        let mut positions = text
+            .with_grapheme_width(&measure)
+            .tokenize_white_space(&measure)
+            .with_partial_tokens(20_000, text, &measure)
+            .add_newlines_at(20_000)
+            .positions(text, &measure);
+
+        assert!(positions.next().is_none());
+    }
 
     #[test]
     fn one_glyph() {
@@ -121,9 +138,9 @@ mod tests {
         let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
-        let text = "A";
+        let text = "a";
         let mut positions = text
-            .with_char_width(&measure)
+            .with_grapheme_width(&measure)
             .tokenize_white_space(&measure)
             .with_partial_tokens(20_000, text, &measure)
             .add_newlines_at(20_000)
@@ -132,7 +149,7 @@ mod tests {
         let token = positions.next().unwrap();
         assert_eq!(
             Position {
-                ch: 'A',
+                ch: 'a',
                 line: 0,
                 offset: 0
             },
@@ -150,7 +167,7 @@ mod tests {
 
         let text = "AB\nCD";
         let mut positions = text
-            .with_char_width(&measure)
+            .with_grapheme_width(&measure)
             .tokenize_white_space(&measure)
             .with_partial_tokens(20_000, text, &measure)
             .add_newlines_at(20_000)

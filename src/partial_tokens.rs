@@ -168,7 +168,8 @@ mod tests {
     use ttf_parser::Face;
 
     use crate::{
-        char_width::WithCharWidth, measure::TTFParserMeasure, whitespace::TokenizeWhiteSpace,
+        grapheme_width::WithGraphemeWidth, measure::TTFParserMeasure,
+        whitespace::TokenizeWhiteSpace,
     };
 
     use super::*;
@@ -181,7 +182,7 @@ mod tests {
 
         let text = "aoeuaoeuaoeuaoeaoeu";
         let mut partials = text
-            .with_char_width(&measure)
+            .with_grapheme_width(&measure)
             .tokenize_white_space(&measure)
             .with_partial_tokens(10000, text, &measure);
 
@@ -215,7 +216,7 @@ mod tests {
 
         let text = "aoeu\naoeu";
         let mut partials = text
-            .with_char_width(&measure)
+            .with_grapheme_width(&measure)
             .tokenize_white_space(&measure)
             .with_partial_tokens(20000, text, &measure);
 
@@ -240,7 +241,7 @@ mod tests {
 
         let text = "\naoeu";
         let mut partials = text
-            .with_char_width(&measure)
+            .with_grapheme_width(&measure)
             .tokenize_white_space(&measure)
             .with_partial_tokens(20000, text, &measure);
 
@@ -271,7 +272,7 @@ mod tests {
 
         let text = "\naoeu";
         let mut partials = text
-            .with_char_width(&measure)
+            .with_grapheme_width(&measure)
             .tokenize_white_space(&measure)
             .with_partial_tokens(20000, text, &measure);
 

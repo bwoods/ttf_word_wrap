@@ -87,7 +87,7 @@ mod tests {
     use ttf_parser::Face;
 
     use crate::{
-        char_width::WithCharWidth, line_break::AddNewlines, measure::TTFParserMeasure,
+        grapheme_width::WithGraphemeWidth, line_break::AddNewlines, measure::TTFParserMeasure,
         partial_tokens::WithPartialTokens, whitespace::TokenizeWhiteSpace,
     };
 
@@ -101,7 +101,7 @@ mod tests {
 
         let text = "1234567890";
         let mut lines = text
-            .with_char_width(&measure)
+            .with_grapheme_width(&measure)
             .tokenize_white_space(&measure)
             .with_partial_tokens(5000, text, &measure)
             .add_newlines_at(5000)
@@ -127,7 +127,7 @@ mod tests {
 
         let text = "123\n456\r\n7890";
         let mut lines = text
-            .with_char_width(&measure)
+            .with_grapheme_width(&measure)
             .tokenize_white_space(&measure)
             .with_partial_tokens(5000, text, &measure)
             .add_newlines_at(5000)
@@ -153,7 +153,7 @@ mod tests {
 
         let text = "123\n\r\n456";
         let mut lines = text
-            .with_char_width(&measure)
+            .with_grapheme_width(&measure)
             .tokenize_white_space(&measure)
             .with_partial_tokens(5000, text, &measure)
             .add_newlines_at(5000)
@@ -181,7 +181,7 @@ mod tests {
 
         let text = "\n1234";
         let mut lines = text
-            .with_char_width(&measure)
+            .with_grapheme_width(&measure)
             .tokenize_white_space(&measure)
             .with_partial_tokens(5000, text, &measure)
             .add_newlines_at(5000)
@@ -204,7 +204,7 @@ mod tests {
 
         let text = "caverns are not for the";
         let mut lines = text
-            .with_char_width(&measure)
+            .with_grapheme_width(&measure)
             .tokenize_white_space(&measure)
             .with_partial_tokens(20_000, text, &measure)
             .add_newlines_at(20_000)

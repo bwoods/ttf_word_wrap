@@ -126,7 +126,7 @@ mod tests {
     use ttf_parser::Face;
 
     use crate::{
-        char_width::WithCharWidth, partial_tokens::WithPartialTokens,
+        grapheme_width::WithGraphemeWidth, partial_tokens::WithPartialTokens,
         whitespace::TokenizeWhiteSpace, TTFParserMeasure,
     };
 
@@ -140,7 +140,7 @@ mod tests {
 
         let text = "";
         let mut tokens = text
-            .with_char_width(&measure)
+            .with_grapheme_width(&measure)
             .tokenize_white_space(&measure)
             .with_partial_tokens(5000, text, &measure)
             .add_newlines_at(5000);
@@ -156,7 +156,7 @@ mod tests {
 
         let text = "\n\n\r\n";
         let mut tokens = text
-            .with_char_width(&measure)
+            .with_grapheme_width(&measure)
             .tokenize_white_space(&measure)
             .with_partial_tokens(5000, text, &measure)
             .add_newlines_at(5000);
@@ -175,7 +175,7 @@ mod tests {
 
         let text = "\n1234";
         let mut tokens = text
-            .with_char_width(&measure)
+            .with_grapheme_width(&measure)
             .tokenize_white_space(&measure)
             .with_partial_tokens(5000, text, &measure)
             .add_newlines_at(5000);
@@ -197,7 +197,7 @@ mod tests {
 
         let text = "1234567890";
         let mut tokens = text
-            .with_char_width(&measure)
+            .with_grapheme_width(&measure)
             .tokenize_white_space(&measure)
             .with_partial_tokens(6000, text, &measure)
             .add_newlines_at(6000);
@@ -222,7 +222,7 @@ mod tests {
 
         let text = "123\n456\r\n7890";
         let mut tokens = text
-            .with_char_width(&measure)
+            .with_grapheme_width(&measure)
             .tokenize_white_space(&measure)
             .with_partial_tokens(5000, text, &measure)
             .add_newlines_at(5000);
@@ -251,7 +251,7 @@ mod tests {
 
         let text = "this is a test";
         let mut tokens = text
-            .with_char_width(&measure)
+            .with_grapheme_width(&measure)
             .tokenize_white_space(&measure)
             .with_partial_tokens(20_000, text, &measure)
             .add_newlines_at(20_000);

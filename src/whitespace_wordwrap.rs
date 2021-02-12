@@ -1,5 +1,5 @@
 use crate::{
-    char_width::{CharWidthIterator, WithCharWidth},
+    grapheme_width::{GraphemeWidthIterator, WithGraphemeWidth},
     line::{LineIterator, Lines},
     line_break::{AddNewlines, LineBreakIterator},
     partial_tokens::{PartialTokensIterator, WithPartialTokens},
@@ -28,11 +28,13 @@ impl<'fnt> WhiteSpaceWordWrap<'fnt> {
 impl<'m, 'txt: 'm> WordWrap<'m, 'txt> for WhiteSpaceWordWrap<'m> {
     type Iterator = LineIterator<
         'txt,
-        LineBreakIterator<PartialTokensIterator<'m, WhiteSpaceIterator<'m, CharWidthIterator<'m>>>>,
+        LineBreakIterator<
+            PartialTokensIterator<'m, WhiteSpaceIterator<'m, GraphemeWidthIterator<'m>>>,
+        >,
     >;
 
     fn word_wrap(&self, text: &'txt str) -> Self::Iterator {
-        text.with_char_width(self.measure)
+        text.with_grapheme_width(self.measure)
             .tokenize_white_space(self.measure)
             .with_partial_tokens(self.max_width, text, self.measure)
             .add_newlines_at(self.max_width)
@@ -43,11 +45,13 @@ impl<'m, 'txt: 'm> WordWrap<'m, 'txt> for WhiteSpaceWordWrap<'m> {
 impl<'m, 'txt: 'm> WordWrapWithPosition<'m, 'txt> for WhiteSpaceWordWrap<'m> {
     type Iterator = PositionIterator<
         'm,
-        LineBreakIterator<PartialTokensIterator<'m, WhiteSpaceIterator<'m, CharWidthIterator<'m>>>>,
+        LineBreakIterator<
+            PartialTokensIterator<'m, WhiteSpaceIterator<'m, GraphemeWidthIterator<'m>>>,
+        >,
     >;
 
     fn word_wrap_with_position(&'m self, text: &'txt str) -> Self::Iterator {
-        text.with_char_width(self.measure)
+        text.with_grapheme_width(self.measure)
             .tokenize_white_space(self.measure)
             .with_partial_tokens(self.max_width, text, self.measure)
             .add_newlines_at(self.max_width)

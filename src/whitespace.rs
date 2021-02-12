@@ -1,6 +1,6 @@
-use std::{char, iter::Peekable};
+use std::iter::Peekable;
 
-use crate::{char_width::CharWidth, measure::Measure, token::Token, token::TokenKind};
+use crate::{grapheme_width::GraphemeWidth, measure::Measure, token::Token, token::TokenKind};
 
 #[derive(Copy, Clone, PartialEq)]
 enum State {
@@ -9,28 +9,33 @@ enum State {
     Other,
 }
 
-impl From<&char> for State {
-    fn from(ch: &char) -> Self {
-        if ch == &'\r' || ch == &'\n' {
-            State::Newline
-        } else if ch.is_whitespace() {
-            State::WhiteSpace
-        } else {
-            State::Other
+impl From<&str> for State {
+    fn from(s: &str) -> Self {
+        match s {
+            "\r\n" | "\n" => State::Newline,
+            s => {
+                if let Some(first) = s.chars().next() {
+                    if first.is_whitespace() {
+                        return State::WhiteSpace;
+                    }
+                }
+
+                State::Other
+            }
         }
     }
 }
 
 pub trait TokenizeWhiteSpace<'a, T>
 where
-    T: Iterator<Item = CharWidth> + Clone,
+    T: Iterator<Item = GraphemeWidth<'a>> + Clone,
 {
     fn tokenize_white_space(self, measure: &'a dyn Measure) -> WhiteSpaceIterator<'a, T>;
 }
 
 impl<'a, T> TokenizeWhiteSpace<'a, T> for T
 where
-    T: Iterator<Item = CharWidth> + Clone,
+    T: Iterator<Item = GraphemeWidth<'a>> + Clone,
 {
     fn tokenize_white_space(self, measure: &'a dyn Measure) -> WhiteSpaceIterator<'a, T> {
         WhiteSpaceIterator::new(self.peekable(), measure)
@@ -40,20 +45,20 @@ where
 #[derive(Clone, Debug)]
 pub struct WhiteSpaceIterator<'a, T>
 where
-    T: Iterator<Item = CharWidth> + Clone,
+    T: Iterator<Item = GraphemeWidth<'a>> + Clone,
 {
     index: usize,
-    chars: Peekable<T>,
+    grapheme_widths: Peekable<T>,
     measure: &'a dyn Measure,
 }
 
 impl<'a, T> WhiteSpaceIterator<'a, T>
 where
-    T: Iterator<Item = CharWidth> + Clone,
+    T: Iterator<Item = GraphemeWidth<'a>> + Clone,
 {
-    pub fn new(chars: Peekable<T>, measure: &'a dyn Measure) -> Self {
+    pub fn new(grapheme_widths: Peekable<T>, measure: &'a dyn Measure) -> Self {
         Self {
-            chars,
+            grapheme_widths,
             index: 0,
             measure,
         }
@@ -62,15 +67,15 @@ where
 
 impl<'a, T> Iterator for WhiteSpaceIterator<'a, T>
 where
-    T: Iterator<Item = CharWidth> + Clone,
+    T: Iterator<Item = GraphemeWidth<'a>> + Clone,
 {
     type Item = TokenKind;
 
     fn next(&mut self) -> Option<Self::Item> {
         // Get the 'mode' for the next `Span` whitespace or not
         // will return None if there is no more text
-        let char_width = self.chars.peek()?;
-        let state = State::from(&char_width.ch);
+        let grapheme_width = self.grapheme_widths.peek()?;
+        let state = State::from(grapheme_width.grapheme);
 
         // keep track of the start of the span
         let start = self.index as usize;
@@ -81,21 +86,21 @@ where
         // The width of the characters
         let mut total_width: u32 = 0;
 
-        while let Some(char_width) = self.chars.peek() {
-            if state != State::from(&char_width.ch) {
+        while let Some(char_width) = self.grapheme_widths.peek() {
+            if state != State::from(char_width.grapheme) {
                 break;
             }
 
             // The char is the same 'mode', advance the iterator
-            let char_width = self.chars.next().unwrap();
+            let char_width = self.grapheme_widths.next().unwrap();
 
             // Increment the end of the span
-            end += char_width.ch.len_utf8();
+            end += char_width.grapheme.len();
             total_width += u32::from(char_width.display_width);
             widths.push(char_width.display_width);
 
-            // Break at the end of a \r\n, we do not combine multiple newlines
-            if state == State::Newline && char_width.ch == '\n' {
+            // Do not group newlinesn together, break
+            if state == State::Newline {
                 break;
             }
         }
@@ -122,7 +127,7 @@ mod tests {
 
     use ttf_parser::Face;
 
-    use crate::{char_width::WithCharWidth, measure::TTFParserMeasure};
+    use crate::{grapheme_width::WithGraphemeWidth, measure::TTFParserMeasure};
 
     use super::*;
 
@@ -133,7 +138,8 @@ mod tests {
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "word";
-        let mut iter = WhiteSpaceIterator::new(text.with_char_width(&measure).peekable(), &measure);
+        let mut iter =
+            WhiteSpaceIterator::new(text.with_grapheme_width(&measure).peekable(), &measure);
 
         let words: Vec<&str> = iter
             .clone()
@@ -152,7 +158,8 @@ mod tests {
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "\r\n\n\r\n\n";
-        let mut iter = WhiteSpaceIterator::new(text.with_char_width(&measure).peekable(), &measure);
+        let mut iter =
+            WhiteSpaceIterator::new(text.with_grapheme_width(&measure).peekable(), &measure);
 
         let words: Vec<&str> = iter
             .clone()
@@ -174,7 +181,8 @@ mod tests {
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "\r\na\n";
-        let mut iter = WhiteSpaceIterator::new(text.with_char_width(&measure).peekable(), &measure);
+        let mut iter =
+            WhiteSpaceIterator::new(text.with_grapheme_width(&measure).peekable(), &measure);
 
         let words: Vec<&str> = iter
             .clone()
@@ -195,7 +203,8 @@ mod tests {
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "  \n  ";
-        let mut iter = WhiteSpaceIterator::new(text.with_char_width(&measure).peekable(), &measure);
+        let mut iter =
+            WhiteSpaceIterator::new(text.with_grapheme_width(&measure).peekable(), &measure);
 
         let words: Vec<&str> = iter
             .clone()
@@ -216,7 +225,8 @@ mod tests {
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "at newline\n  some thing";
-        let mut iter = WhiteSpaceIterator::new(text.with_char_width(&measure).peekable(), &measure);
+        let mut iter =
+            WhiteSpaceIterator::new(text.with_grapheme_width(&measure).peekable(), &measure);
 
         let words: Vec<&str> = iter
             .clone()
@@ -239,25 +249,24 @@ mod tests {
     }
 
     #[test]
-    fn with_newlines() {
+    fn test_y() {
         let font_data = crate::tests::read_font();
         let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
-        let text = "123\n456\r\n7890";
-        let mut iter = WhiteSpaceIterator::new(text.with_char_width(&measure).peekable(), &measure);
+        let text = "y̆";
+        let mut iter =
+            WhiteSpaceIterator::new(text.with_grapheme_width(&measure).peekable(), &measure);
 
         let words: Vec<&str> = iter
             .clone()
             .map(|t| t.into_token().unwrap().as_str(text))
             .collect();
-        assert_eq!(words, vec!["123", "\n", "456", "\r\n", "7890"]);
 
-        assert!(matches!(iter.next(), Some(TokenKind::Required(_))));
-        assert!(matches!(iter.next(), Some(TokenKind::Newline(_))));
-        assert!(matches!(iter.next(), Some(TokenKind::Required(_))));
-        assert!(matches!(iter.next(), Some(TokenKind::Newline(_))));
-        assert!(matches!(iter.next(), Some(TokenKind::Required(_))));
+        assert_eq!(words, vec!["y̆"]);
+
+        let token = iter.next();
+        assert!(matches!(token, Some(TokenKind::Required(_))));
         assert!(iter.next().is_none());
     }
 }
