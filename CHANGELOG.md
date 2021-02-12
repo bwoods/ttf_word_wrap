@@ -1,3 +1,9 @@
+# 0.2.1
+
+#### Fixed
+
+Examples in README.md now work.
+
 # 0.2.0
 
 #### Added:
