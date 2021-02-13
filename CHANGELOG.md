@@ -1,3 +1,7 @@
+# 0.4.0
+
+Changed the return type of `wrap_with_position()` from `Position` to `CharPosition`.
+
 # 0.3.0
 
 Fixed a bug when tokenizing "y̆".

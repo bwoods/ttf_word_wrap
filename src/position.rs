@@ -2,6 +2,16 @@ use std::{fmt::Formatter, str::Chars};
 
 use crate::{token::TokenKind, Measure};
 
+/// The position of a char, if known.
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub enum CharPosition {
+    /// The position of `char` is known.
+    Known(Position),
+
+    /// The position of `char` is not known because `Measure` did not known it's size.
+    Unknown(char),
+}
+
 /// A `char`s position in lines of text
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Position {
@@ -59,7 +69,7 @@ impl<'a, T> Iterator for PositionIterator<'a, T>
 where
     T: Iterator<Item = TokenKind>,
 {
-    type Item = Position;
+    type Item = CharPosition;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.chars.as_mut() {
@@ -68,11 +78,16 @@ where
                     // There is a char! Measure it and create the Position
                     let offset = self.display_offset;
                     // add this glyph's width to the display_offset
-                    self.display_offset += u32::from(self.measure.char(ch));
-                    Position {
-                        ch,
-                        line: self.line,
-                        offset,
+                    match self.measure.char(ch) {
+                        Some(char_width) => {
+                            self.display_offset += u32::from(char_width);
+                            CharPosition::Known(Position {
+                                ch,
+                                line: self.line,
+                                offset,
+                            })
+                        }
+                        None => CharPosition::Unknown(ch),
                     }
                     .into()
                 }
@@ -147,14 +162,14 @@ mod tests {
             .positions(text, &measure);
 
         let token = positions.next().unwrap();
-        assert_eq!(
-            Position {
+        assert!(matches!(
+            token,
+            CharPosition::Known(Position {
                 ch: 'a',
                 line: 0,
                 offset: 0
-            },
-            token
-        );
+            })
+        ));
 
         assert!(positions.next().is_none());
     }
@@ -174,42 +189,74 @@ mod tests {
             .positions(text, &measure);
 
         let token = positions.next().unwrap();
-        assert_eq!(
-            Position {
+        assert!(matches!(
+            token,
+            CharPosition::Known(Position {
                 ch: 'A',
                 line: 0,
                 offset: 0
-            },
-            token
-        );
+            },)
+        ));
+
         let token = positions.next().unwrap();
-        assert_eq!(
-            Position {
+        assert!(matches!(
+            token,
+            CharPosition::Known(Position {
                 ch: 'B',
                 line: 0,
                 offset: 1336
-            },
-            token
-        );
+            },)
+        ));
+
         let token = positions.next().unwrap();
-        assert_eq!(
-            Position {
+        assert!(matches!(
+            token,
+            CharPosition::Known(Position {
                 ch: 'C',
                 line: 1,
                 offset: 0
-            },
-            token
-        );
+            },)
+        ));
+
         let token = positions.next().unwrap();
-        assert_eq!(
-            Position {
+        assert!(matches!(
+            token,
+            CharPosition::Known(Position {
                 ch: 'D',
                 line: 1,
                 offset: 1333
-            },
-            token
-        );
+            },)
+        ));
 
         assert!(positions.next().is_none());
+    }
+
+    #[test]
+    fn test_y() {
+        let font_data = crate::tests::read_font();
+        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let measure = TTFParserMeasure::new(&font_face);
+
+        let text = "y̆";
+
+        let mut positions = text
+            .with_grapheme_width(&measure)
+            .tokenize_white_space(&measure)
+            .with_partial_tokens(20_000, text, &measure)
+            .add_newlines_at(20_000)
+            .positions(text, &measure);
+
+        let token = positions.next().unwrap();
+        assert!(matches!(
+            token,
+            CharPosition::Known(Position {
+                ch: 'y',
+                line: 0,
+                offset: 0
+            },)
+        ));
+
+        let token = positions.next().unwrap();
+        assert!(matches!(token, CharPosition::Unknown('\u{306}')));
     }
 }

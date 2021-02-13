@@ -25,7 +25,8 @@
 //!
 //!```
 //! use ttf_parser::Face;
-//! use ttf_word_wrap::{WrapWithPosition, WhiteSpaceWordWrap, TTFParserMeasure, Position};
+//! use ttf_word_wrap::{WrapWithPosition, WhiteSpaceWordWrap, TTFParserMeasure, CharPosition,
+//! Position};
 //!
 //! // Load a TrueType font using `ttf_parser`
 //! let font_data = std::fs::read("./test_fonts/Roboto-Regular.ttf").expect("TTF should exist");
@@ -37,10 +38,11 @@
 //!
 //! // Use the `Wrap` trait and split the `&str`
 //! let poem = "Mary had a little lamb whose fleece was white as snow";
-//! let positions: Vec<Position> = poem.wrap_with_position(&word_wrap).collect();
+//! let positions: Vec<CharPosition> = poem.wrap_with_position(&word_wrap).collect();
 //!
 //! // offset is in the unit (em) of the TTFParserMeasure.
-//! assert_eq!(positions[0], Position { ch: 'M', line: 0, offset: 0 });
+//! // If the font does not have the given char, `CharPosition::Unknown('M')` is returned.
+//! assert!(matches!(positions[0], CharPosition::Known(Position { ch: 'M', line: 0, offset: 0 })));
 //!```
 #![warn(missing_docs, missing_debug_implementations, rust_2018_idioms)]
 #![doc(test(attr(deny(rust_2018_idioms, warnings))))]
@@ -58,9 +60,12 @@ mod whitespace_wordwrap;
 mod wordwrap;
 
 pub use measure::{Measure, TTFParserMeasure};
-pub use position::Position;
+pub use position::{CharPosition, Position};
 pub use whitespace_wordwrap::WhiteSpaceWordWrap;
 pub use wordwrap::{Wrap, WrapWithPosition};
+
+#[cfg(doctest)]             
+doc_comment::doctest!("../README.md");
 
 #[cfg(test)]
 mod tests {
@@ -69,8 +74,8 @@ mod tests {
     use ttf_parser::Face;
 
     use crate::{
-        measure::TTFParserMeasure, whitespace_wordwrap::WhiteSpaceWordWrap, wordwrap::Wrap,
-        Position, WrapWithPosition,
+        measure::TTFParserMeasure, position::CharPosition, whitespace_wordwrap::WhiteSpaceWordWrap,
+        wordwrap::Wrap, Position, WrapWithPosition,
     };
 
     pub fn read_font<'a>() -> Vec<u8> {
@@ -152,41 +157,41 @@ mod tests {
             .wrap_with_position(&wsww);
 
         let token = positions.next().unwrap();
-        assert_eq!(
-            Position {
+        assert!(matches!(
+            token,
+            CharPosition::Known(Position {
                 ch: 'T',
                 line: 0,
                 offset: 0
-            },
-            token
-        );
+            },)
+        ));
 
         // advance some
         (0..30).for_each(|_| {
             positions.next().unwrap();
         });
         let token = positions.next().unwrap();
-        assert_eq!(
-            Position {
+        assert!(matches!(
+            token,
+            CharPosition::Known(Position {
                 ch: 'o',
                 line: 1,
                 offset: 15233
-            },
-            token
-        );
+            },)
+        ));
 
         // advance some more
         (0..30).for_each(|_| {
             positions.next().unwrap();
         });
         let token = positions.next().unwrap();
-        assert_eq!(
-            Position {
+        assert!(matches!(
+            token,
+            CharPosition::Known(Position {
                 ch: ';',
                 line: 3,
                 offset: 7313
-            },
-            token
-        );
+            },)
+        ));
     }
 }

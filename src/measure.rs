@@ -8,7 +8,9 @@ pub trait Measure: std::fmt::Debug {
     fn str(&self, text: &str) -> u32;
 
     /// Measures the display width of `c`.
-    fn char(&self, c: char) -> u16;
+    ///
+    /// Returns `None` if the width is not known.
+    fn char(&self, c: char) -> Option<u16>;
 }
 
 /// Implements measuring glyphs via `ttf_parser`
@@ -30,16 +32,17 @@ impl<'a> TTFParserMeasure<'a> {
 
 impl<'a> Measure for TTFParserMeasure<'a> {
     fn str(&self, text: &str) -> u32 {
-        text.chars().map(|c| u32::from(self.char(c))).sum()
+        text.chars()
+            .map(|c| u32::from(self.char(c).unwrap_or_default()))
+            .sum()
     }
 
     #[inline]
-    fn char(&self, c: char) -> u16 {
+    fn char(&self, c: char) -> Option<u16> {
         self.face
             .glyph_index(c)
             .map(|glyph_id| self.face.glyph_hor_advance(glyph_id))
             .flatten()
-            .unwrap_or_default()
     }
 }
 
@@ -65,7 +68,7 @@ mod tests {
         let dw = TTFParserMeasure::new(&font_face);
 
         let text = "a";
-        let width = dw.char(text.chars().next().unwrap());
+        let width = dw.char(text.chars().next().unwrap()).unwrap();
         assert_eq!(width, 1114);
     }
 

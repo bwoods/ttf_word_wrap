@@ -26,7 +26,8 @@ assert_eq!(lines[0], "Mary had a little lamb");
 
 ```rust
 use ttf_parser::Face;
-use ttf_word_wrap::{WrapWithPosition, WhiteSpaceWordWrap, TTFParserMeasure, Position};
+use ttf_word_wrap::{WrapWithPosition, WhiteSpaceWordWrap, TTFParserMeasure, CharPosition,
+Position};
 
 // Load a TrueType font using `ttf_parser`
 let font_data = std::fs::read("./test_fonts/Roboto-Regular.ttf").expect("TTF should exist");
@@ -38,8 +39,9 @@ let word_wrap = WhiteSpaceWordWrap::new(20000, &measure);
 
 // Use the `Wrap` trait and split the `&str`
 let poem = "Mary had a little lamb whose fleece was white as snow";
-let positions: Vec<Position> = poem.wrap_with_position(&word_wrap).collect();
+let positions: Vec<CharPosition> = poem.wrap_with_position(&word_wrap).collect();
 
 // offset is in the unit (em) of the TTFParserMeasure.
-assert_eq!(positions[0], Position { ch: 'M', line: 0, offset: 0 });
+// If the font does not have the given char, `CharPosition::Unknown('M')` is returned.
+assert!(matches!(positions[0], CharPosition::Known(Position { ch: 'M', line: 0, offset: 0 })));
 ```

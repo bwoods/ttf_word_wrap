@@ -130,7 +130,8 @@ impl Token {
         let mut chars = text[self.start..self.end].chars();
 
         while let Some(ch) = chars.next() {
-            let ch_display_width = measure.char(ch);
+            // char widths that are not known will be placed on the same line
+            let ch_display_width = measure.char(ch).unwrap_or_default();
             let next_width = head_width + u32::from(ch_display_width);
 
             if next_width > display_width {
