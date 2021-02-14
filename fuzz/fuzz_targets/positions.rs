@@ -2,7 +2,7 @@
 use libfuzzer_sys::fuzz_target;
 
 use ttf_parser::Face;
-use ttf_word_wrap::{Position, TTFParserMeasure, WhiteSpaceWordWrap, WrapWithPosition};
+use ttf_word_wrap::{CharPosition, TTFParserMeasure, WhiteSpaceWordWrap, WrapWithPosition};
 
 fuzz_target!(|data: &[u8]| {
     // Load a TrueType font using `ttf_parser`
@@ -16,6 +16,6 @@ fuzz_target!(|data: &[u8]| {
     let _ = String::from_utf8(data.to_vec()).map(|s| {
         let _ = (&s[..])
             .wrap_with_position(&word_wrap)
-            .collect::<Vec<Position>>();
+            .collect::<Vec<CharPosition>>();
     });
 });
