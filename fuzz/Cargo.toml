@@ -10,7 +10,6 @@ edition = "2018"
 cargo-fuzz = true
 
 [dependencies]
-fastrand = "1.4.0"
 libfuzzer-sys = "0.3"
 ttf-parser = "0.11.0"
 ttf_word_wrap = { path = ".." }
