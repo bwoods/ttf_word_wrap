@@ -72,49 +72,52 @@ where
     type Item = CharPosition;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.chars.as_mut() {
-            Some(chars) => match chars.next() {
-                Some(ch) => {
-                    // There is a char! Measure it and create the Position
-                    let offset = self.display_offset;
-                    // add this glyph's width to the display_offset
-                    match self.measure.char(ch) {
-                        Some(char_width) => {
-                            self.display_offset += u32::from(char_width);
-                            CharPosition::Known(Position {
-                                ch,
-                                line: self.line,
-                                offset,
-                            })
+        loop {
+            match self.chars.as_mut() {
+                Some(chars) => match chars.next() {
+                    Some(ch) => {
+                        // There is a char! Measure it and create the Position
+                        let offset = self.display_offset;
+                        // add this glyph's width to the display_offset
+                        let next_item = match self.measure.char(ch) {
+                            Some(char_width) => {
+                                self.display_offset += u32::from(char_width);
+                                CharPosition::Known(Position {
+                                    ch,
+                                    line: self.line,
+                                    offset,
+                                })
+                            }
+                            None => CharPosition::Unknown(ch),
                         }
-                        None => CharPosition::Unknown(ch),
+                        .into();
+                        return next_item;
                     }
-                    .into()
-                }
-                None => {
-                    // there are no more chars, set it to None and retry
-                    self.chars.take();
-                    self.next()
-                }
-            },
-            None => match self.tokens.next() {
-                Some(TokenKind::Newline(_)) => {
-                    // Increment the line and call again
-                    self.line += 1;
-                    self.display_offset = 0;
-                    self.next()
-                }
-                Some(TokenKind::Optional(token)) | Some(TokenKind::Required(token)) => {
-                    // There is another token, prep chars
-                    let chars = self.text[token.start..token.end].chars();
-                    self.chars.replace(chars);
-                    self.next()
-                }
-                None => {
-                    // End the iteration, no more tokens
-                    return None;
-                }
-            },
+                    None => {
+                        // there are no more chars, set it to None and retry
+                        self.chars.take();
+                        continue;
+                    }
+                },
+                None => match self.tokens.next() {
+                    Some(TokenKind::Newline(_)) => {
+                        // Increment the line and call again
+                        self.line += 1;
+                        self.display_offset = 0;
+                        continue;
+                    }
+                    Some(TokenKind::Optional(token)) | Some(TokenKind::Required(token)) => {
+                        // There is another token, prep chars
+                        let chars = self.text[token.start..token.end].chars();
+                        self.chars.replace(chars);
+                        continue;
+                    }
+                    None => {
+                        // End the iteration, no more tokens
+                        return None;
+                    }
+                },
+            }
         }
     }
 }
