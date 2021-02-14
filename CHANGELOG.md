@@ -1,3 +1,8 @@
+# 0.4.1
+
+Changed internal recursion to iteration.
+Improved fuzzing.
+
 # 0.4.0
 
 Changed the return type of `wrap_with_position()` from `Position` to `CharPosition`.
