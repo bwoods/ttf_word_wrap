@@ -262,4 +262,32 @@ mod tests {
         let token = positions.next().unwrap();
         assert!(matches!(token, CharPosition::Unknown('\u{306}')));
     }
+
+    #[test]
+    fn test_no_width() {
+        let font_data = crate::tests::read_font();
+        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let measure = TTFParserMeasure::new(&font_face);
+
+        let text = "T";
+
+        let mut positions = text
+            .with_grapheme_width(&measure)
+            .tokenize_white_space(&measure)
+            .with_partial_tokens(0, text, &measure)
+            .add_newlines_at(0)
+            .positions(text, &measure);
+
+        let token = positions.next();
+        assert!(matches!(
+            token,
+            Some(CharPosition::Known(Position {
+                ch: 'T',
+                line: 0,
+                offset: 0
+            }))
+        ));
+
+        assert!(positions.next().is_none());
+    }
 }

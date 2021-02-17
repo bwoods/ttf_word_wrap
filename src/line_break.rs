@@ -20,6 +20,7 @@ where
             tokens: self,
             width_remaining: max_width,
             previous_token_kind: None,
+            force_newline: false,
         }
     }
 }
@@ -39,6 +40,8 @@ pub struct LineBreakIterator<T> {
     /// We need the previous token to create TokenKind::Newline
     /// `previous_token` is `None` if the iterator is at the beginning of a line.
     previous_token_kind: Option<Kind>,
+
+    force_newline: bool,
 }
 
 impl<T> LineBreakIterator<T>
@@ -70,9 +73,21 @@ where
     type Item = TokenKind;
 
     fn next(&mut self) -> Option<Self::Item> {
+        if self.force_newline {
+            self.force_newline = false;
+            return Some(TokenKind::Newline(None));
+        }
+
         // Take tokens until there is no more space left (or the next token doesn't fit)
         while let Some(partial_token) = self.tokens.next(self.width_remaining) {
             return match partial_token {
+                PartialToken::TokenOverflow(token_kind) => {
+                    // Only force the newline if there is a token following this one
+                    if self.tokens.peek(self.max_width).is_some() {
+                        self.force_newline = true;
+                    }
+                    Some(token_kind)
+                }
                 PartialToken::Token(token_kind) => {
                     // Skip optional tokens at the beginning of a line
                     if self.previous_token_kind.is_none() && token_kind.is_optional() {
@@ -86,7 +101,9 @@ where
                             let width_remaining = self.width_remaining - token.display_width;
                             match self.tokens.peek(width_remaining) {
                                 Some(PartialToken::Token(_)) => TokenKind::Optional(token),
-                                None | Some(PartialToken::EndOfLine) => {
+                                None
+                                | Some(PartialToken::TokenOverflow(_))
+                                | Some(PartialToken::EndOfLine) => {
                                     // The following token will not fit on the line, do not keep the current
                                     // optional token, replace it with a synthetic newline
                                     TokenKind::Newline(None)
@@ -107,14 +124,13 @@ where
                         self.previous_token_kind.replace(token_kind.kind());
                     }
 
-                    token_kind
+                    Some(token_kind)
                 }
                 PartialToken::EndOfLine => {
                     self.newline();
-                    TokenKind::Newline(None)
+                    Some(TokenKind::Newline(None))
                 }
-            }
-            .into();
+            };
         }
 
         None
@@ -126,7 +142,7 @@ mod tests {
     use ttf_parser::Face;
 
     use crate::{
-        grapheme_width::WithGraphemeWidth, partial_tokens::WithPartialTokens,
+        grapheme_width::WithGraphemeWidth, partial_tokens::WithPartialTokens, token::Token,
         whitespace::TokenizeWhiteSpace, TTFParserMeasure,
     };
 
@@ -264,6 +280,70 @@ mod tests {
                 let text = token.as_str(text);
                 assert_eq!(text, expected);
             });
+
+        assert!(tokens.next().is_none());
+    }
+
+    #[test]
+    fn no_width() {
+        let font_data = crate::tests::read_font();
+        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let measure = TTFParserMeasure::new(&font_face);
+
+        let text = "TEST";
+        let mut tokens = text
+            .with_grapheme_width(&measure)
+            .tokenize_white_space(&measure)
+            .with_partial_tokens(0, text, &measure)
+            .add_newlines_at(0);
+
+        let token = tokens.next().unwrap();
+        assert!(matches!(
+            token,
+            TokenKind::Required(Token {
+                start: 0,
+                end: 1,
+                ..
+            })
+        ));
+
+        let token = tokens.next().unwrap();
+        assert!(matches!(token, TokenKind::Newline(None)));
+
+        let token = tokens.next().unwrap();
+        assert!(matches!(
+            token,
+            TokenKind::Required(Token {
+                start: 1,
+                end: 2,
+                ..
+            })
+        ));
+
+        let token = tokens.next().unwrap();
+        assert!(matches!(token, TokenKind::Newline(None)));
+
+        let token = tokens.next().unwrap();
+        assert!(matches!(
+            token,
+            TokenKind::Required(Token {
+                start: 2,
+                end: 3,
+                ..
+            })
+        ));
+        let token = tokens.next().unwrap();
+        assert!(matches!(token, TokenKind::Newline(None)));
+
+        let token = tokens.next().unwrap();
+        assert!(matches!(
+            token,
+            TokenKind::Required(Token {
+                start: 3,
+                end: 4,
+                ..
+            })
+        ));
 
         assert!(tokens.next().is_none());
     }

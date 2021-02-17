@@ -218,4 +218,33 @@ mod tests {
 
         assert!(lines.next().is_none());
     }
+
+    #[test]
+    fn no_width() {
+        let font_data = crate::tests::read_font();
+        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let measure = TTFParserMeasure::new(&font_face);
+
+        let text = "word";
+        let mut lines = text
+            .with_grapheme_width(&measure)
+            .tokenize_white_space(&measure)
+            .with_partial_tokens(0, text, &measure)
+            .add_newlines_at(0)
+            .lines(text);
+
+        let token = lines.next().unwrap();
+        assert_eq!("w", token);
+
+        let token = lines.next().unwrap();
+        assert_eq!("o", token);
+
+        let token = lines.next().unwrap();
+        assert_eq!("r", token);
+
+        let token = lines.next().unwrap();
+        assert_eq!("d", token);
+
+        assert!(lines.next().is_none());
+    }
 }

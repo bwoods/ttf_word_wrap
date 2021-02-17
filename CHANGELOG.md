@@ -2,6 +2,7 @@
 
 Changed internal recursion to iteration.
 Improved fuzzing.
+Graphemes that are wider than the max_width will be returned on their own lines.
 
 # 0.4.0
 

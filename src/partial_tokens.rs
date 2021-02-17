@@ -40,19 +40,24 @@ where
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum PartialToken {
     Token(TokenKind),
+    TokenOverflow(TokenKind),
     EndOfLine,
 }
 
 impl PartialToken {
     pub fn into_token(self) -> Option<Token> {
         match self {
-            PartialToken::Token(token_kind) => token_kind.into_token(),
+            PartialToken::Token(token_kind) | PartialToken::TokenOverflow(token_kind) => {
+                token_kind.into_token()
+            }
             PartialToken::EndOfLine => None,
         }
     }
     pub fn into_tokenkind(self) -> Option<TokenKind> {
         match self {
-            PartialToken::Token(token_kind) => Some(token_kind),
+            PartialToken::Token(token_kind) | PartialToken::TokenOverflow(token_kind) => {
+                Some(token_kind)
+            }
             PartialToken::EndOfLine => None,
         }
     }
@@ -84,34 +89,63 @@ where
     T: Iterator<Item = TokenKind>,
 {
     fn process_partial(
-        &self,
+        &mut self,
+        is_peek: bool,
         token_kind: TokenKind,
         space_remaining: u32,
-    ) -> (Option<TokenKind>, Option<TokenKind>) {
+    ) -> Option<PartialToken> {
         let kind = token_kind.kind();
 
         let token = match token_kind {
             TokenKind::Required(token) | TokenKind::Optional(token) => token,
             newline @ TokenKind::Newline(_) => {
                 // Newlines pass though
-                return (Some(newline), None);
+                return Some(PartialToken::Token(newline));
             }
         };
 
         if token.display_width > self.max_width {
             // If the word is wider than the max_width we break it anywhere
-            let (head, tail) = token.split_at(space_remaining, self.text, self.measure);
-            let head = head.map(|t| kind.token(t));
-            let tail = tail.map(|t| kind.token(t));
-            (head, tail)
+            let (head, tail) = token.split_at_width(space_remaining, self.text, self.measure);
+
+            // If there is a tail and no head when max_width and space_remaining are the
+            // same, then we return the first grapheme.
+            let (head, tail) = match (head, tail) {
+                (None, Some(_)) if space_remaining == self.max_width => {
+                    // Could not split the token by display width
+                    let (head, tail) = token.split_at_grapheme(1, self.text, self.measure);
+                    let head = head.map_or_else(
+                        || PartialToken::EndOfLine,
+                        |t| PartialToken::TokenOverflow(kind.token(t)),
+                    );
+                    (Some(head), tail)
+                }
+                (head, tail) => {
+                    let head = head.map_or_else(
+                        || PartialToken::EndOfLine,
+                        |t| PartialToken::Token(kind.token(t)),
+                    );
+                    (Some(head), tail)
+                }
+            };
+
+            if let Some(tail) = tail {
+                if !is_peek {
+                    self.partial.replace(kind.token(tail));
+                }
+            }
+
+            head
         } else if token.display_width > space_remaining {
             // If the word is not wider than the max width and the line doesn't have room, return
             // None
-            // self.partial.replace(kind.token(token));
-            (None, Some(kind.token(token)))
+            if !is_peek {
+                self.partial.replace(kind.token(token));
+            }
+            Some(PartialToken::EndOfLine)
         } else {
             // There is room on the line for the token
-            (Some(kind.token(token)), None)
+            Some(PartialToken::Token(kind.token(token)))
         }
     }
 }
@@ -123,42 +157,22 @@ where
     type Item = PartialToken;
 
     fn next(&mut self, space_remaining: u32) -> Option<PartialToken> {
-        let head_tail = match self.partial.take() {
-            Some(partial) => self.process_partial(partial, space_remaining),
+        match self.partial.take() {
+            Some(partial) => self.process_partial(false, partial, space_remaining),
             None => {
                 let token = self.tokens.next()?;
-                self.process_partial(token, space_remaining)
-            }
-        };
-
-        // If there is a tail, preserve it, return the heads
-        match head_tail {
-            (head, None) => head.map(PartialToken::Token),
-            (head, Some(tail)) => {
-                self.partial.replace(tail);
-                head.map_or_else(
-                    || Some(PartialToken::EndOfLine),
-                    |t| Some(PartialToken::Token(t)),
-                )
+                self.process_partial(false, token, space_remaining)
             }
         }
     }
 
     fn peek(&mut self, space_remaining: u32) -> Option<PartialToken> {
-        let head_tail = match self.partial.clone() {
-            Some(partial) => self.process_partial(partial, space_remaining),
+        match self.partial.clone() {
+            Some(partial) => self.process_partial(true, partial, space_remaining),
             None => {
                 let token = self.tokens.peek()?.clone();
-                self.process_partial(token, space_remaining)
+                self.process_partial(true, token, space_remaining)
             }
-        };
-
-        match head_tail {
-            (head, None) => head.map(PartialToken::Token),
-            (head, Some(_)) => head.map_or_else(
-                || Some(PartialToken::EndOfLine),
-                |t| Some(PartialToken::Token(t)),
-            ),
         }
     }
 }
@@ -287,5 +301,24 @@ mod tests {
 
         let token = partials.peek(3000).unwrap().into_tokenkind().unwrap();
         assert!(token.is_newline());
+    }
+
+    #[test]
+    fn no_width() {
+        let font_data = crate::tests::read_font();
+        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let measure = TTFParserMeasure::new(&font_face);
+
+        let text = "T";
+        let mut partials = text
+            .with_grapheme_width(&measure)
+            .tokenize_white_space(&measure)
+            .with_partial_tokens(0, text, &measure);
+
+        let token = partials.next(0).unwrap().into_token().unwrap();
+        assert_eq!("T", token.as_str(&text));
+
+        let token = partials.next(0);
+        assert!(token.is_none());
     }
 }

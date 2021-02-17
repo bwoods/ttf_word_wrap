@@ -64,7 +64,7 @@ pub use position::{CharPosition, Position};
 pub use whitespace_wordwrap::WhiteSpaceWordWrap;
 pub use wordwrap::{Wrap, WrapWithPosition};
 
-#[cfg(doctest)]             
+#[cfg(doctest)]
 doc_comment::doctest!("../README.md");
 
 #[cfg(test)]
@@ -193,5 +193,54 @@ mod tests {
                 offset: 7313
             },)
         ));
+    }
+
+    #[test]
+    fn no_width() {
+        let font_data = read_font();
+        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let measure = TTFParserMeasure::new(&font_face);
+
+        let wsww = WhiteSpaceWordWrap::new(0, &measure);
+
+        let mut positions = "word".wrap_with_position(&wsww);
+
+        let token = positions.next();
+        assert!(matches!(
+            token,
+            Some(CharPosition::Known(Position {
+                ch: 'w',
+                line: 0,
+                offset: 0
+            }))
+        ));
+        let token = positions.next();
+        assert!(matches!(
+            token,
+            Some(CharPosition::Known(Position {
+                ch: 'o',
+                line: 1,
+                offset: 0
+            }))
+        ));
+        let token = positions.next();
+        assert!(matches!(
+            token,
+            Some(CharPosition::Known(Position {
+                ch: 'r',
+                line: 2,
+                offset: 0
+            }))
+        ));
+        let token = positions.next();
+        assert!(matches!(
+            token,
+            Some(CharPosition::Known(Position {
+                ch: 'd',
+                line: 3,
+                offset: 0
+            }))
+        ));
+        assert!(positions.next().is_none());
     }
 }
