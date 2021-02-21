@@ -13,7 +13,7 @@ readme = "README.md"
 repository = "https://sr.ht/~halzy/ttf_word_wrap/"
 
 [dependencies]
-ttf-parser = "0.11.0"
+ttf-parser = "0.12.0"
 unicode-segmentation = "1.7.1"
 
 [dev-dependencies]

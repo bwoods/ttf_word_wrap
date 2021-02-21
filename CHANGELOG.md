@@ -1,3 +1,7 @@
+# 0.4.2
+
+Updating ttf_parser to 0.12.0
+
 # 0.4.1
 
 Changed internal recursion to iteration.
