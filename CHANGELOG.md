@@ -1,3 +1,7 @@
+# 0.5.0
+
+Added the glyph width to Position.
+
 # 0.4.2
 
 Updating ttf_parser to 0.12.0
