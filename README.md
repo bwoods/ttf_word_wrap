@@ -43,5 +43,5 @@ let positions: Vec<CharPosition> = poem.wrap_with_position(&word_wrap).collect()
 
 // offset is in the unit (em) of the TTFParserMeasure.
 // If the font does not have the given char, `CharPosition::Unknown('M')` is returned.
-assert!(matches!(positions[0], CharPosition::Known(Position { ch: 'M', line: 0, offset: 0 })));
+assert!(matches!(positions[0], CharPosition::Known(Position { ch: 'M', line: 0, offset: 0, width: 1788 })));
 ```

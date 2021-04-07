@@ -42,7 +42,7 @@
 //!
 //! // offset is in the unit (em) of the TTFParserMeasure.
 //! // If the font does not have the given char, `CharPosition::Unknown('M')` is returned.
-//! assert!(matches!(positions[0], CharPosition::Known(Position { ch: 'M', line: 0, offset: 0 })));
+//! assert!(matches!(positions[0], CharPosition::Known(Position { ch: 'M', line: 0, offset: 0, width: 1788 })));
 //!```
 #![warn(missing_docs, missing_debug_implementations, rust_2018_idioms)]
 #![doc(test(attr(deny(rust_2018_idioms, warnings))))]
@@ -162,7 +162,8 @@ mod tests {
             CharPosition::Known(Position {
                 ch: 'T',
                 line: 0,
-                offset: 0
+                offset: 0,
+                width: 1222
             },)
         ));
 
@@ -176,7 +177,8 @@ mod tests {
             CharPosition::Known(Position {
                 ch: 'o',
                 line: 1,
-                offset: 15233
+                offset: 15233,
+                width: 1168
             },)
         ));
 
@@ -190,7 +192,8 @@ mod tests {
             CharPosition::Known(Position {
                 ch: ';',
                 line: 3,
-                offset: 7313
+                offset: 7313,
+                width: 433
             },)
         ));
     }
@@ -211,7 +214,8 @@ mod tests {
             Some(CharPosition::Known(Position {
                 ch: 'w',
                 line: 0,
-                offset: 0
+                offset: 0,
+                width: 1539
             }))
         ));
         let token = positions.next();
@@ -220,7 +224,8 @@ mod tests {
             Some(CharPosition::Known(Position {
                 ch: 'o',
                 line: 1,
-                offset: 0
+                offset: 0,
+                width: 1168
             }))
         ));
         let token = positions.next();
@@ -229,7 +234,8 @@ mod tests {
             Some(CharPosition::Known(Position {
                 ch: 'r',
                 line: 2,
-                offset: 0
+                offset: 0,
+                width: 693
             }))
         ));
         let token = positions.next();
@@ -238,7 +244,8 @@ mod tests {
             Some(CharPosition::Known(Position {
                 ch: 'd',
                 line: 3,
-                offset: 0
+                offset: 0,
+                width: 1155
             }))
         ));
         assert!(positions.next().is_none());

@@ -23,6 +23,9 @@ pub struct Position {
 
     /// The horizontal offset in the same units as the Font
     pub offset: u32,
+
+    /// The width of the char
+    pub width: u16,
 }
 
 pub trait Positions<T> {
@@ -86,6 +89,7 @@ where
                                     ch,
                                     line: self.line,
                                     offset,
+                                    width: char_width,
                                 })
                             }
                             None => CharPosition::Unknown(ch),
@@ -170,7 +174,8 @@ mod tests {
             CharPosition::Known(Position {
                 ch: 'a',
                 line: 0,
-                offset: 0
+                offset: 0,
+                width: 1114
             })
         ));
 
@@ -197,7 +202,8 @@ mod tests {
             CharPosition::Known(Position {
                 ch: 'A',
                 line: 0,
-                offset: 0
+                offset: 0,
+                width: 1336
             },)
         ));
 
@@ -207,7 +213,8 @@ mod tests {
             CharPosition::Known(Position {
                 ch: 'B',
                 line: 0,
-                offset: 1336
+                offset: 1336,
+                width: 1275
             },)
         ));
 
@@ -217,7 +224,8 @@ mod tests {
             CharPosition::Known(Position {
                 ch: 'C',
                 line: 1,
-                offset: 0
+                offset: 0,
+                width: 1333
             },)
         ));
 
@@ -227,7 +235,8 @@ mod tests {
             CharPosition::Known(Position {
                 ch: 'D',
                 line: 1,
-                offset: 1333
+                offset: 1333,
+                width: 1343
             },)
         ));
 
@@ -255,7 +264,8 @@ mod tests {
             CharPosition::Known(Position {
                 ch: 'y',
                 line: 0,
-                offset: 0
+                offset: 0,
+                width: 969
             },)
         ));
 
@@ -284,7 +294,8 @@ mod tests {
             Some(CharPosition::Known(Position {
                 ch: 'T',
                 line: 0,
-                offset: 0
+                offset: 0,
+                width: 1222
             }))
         ));
 
