@@ -199,7 +199,7 @@ mod tests {
     #[test]
     fn full_width() {
         let font_data = crate::tests::read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "1234567890";
@@ -213,7 +213,7 @@ mod tests {
     #[test]
     fn too_narrow() {
         let font_data = crate::tests::read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "1234567890";
@@ -228,7 +228,7 @@ mod tests {
     #[test]
     fn split_even() {
         let font_data = crate::tests::read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "1234567890";
@@ -242,7 +242,7 @@ mod tests {
     #[test]
     fn fuzz_wrap_1() {
         let font_data = crate::tests::read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "\r\n[wwwwwwwwwwwww";
@@ -260,7 +260,7 @@ mod tests {
     #[test]
     fn hello() {
         let font_data = crate::tests::read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "今日は!";
@@ -282,7 +282,7 @@ mod tests {
     #[test]
     fn width() {
         let font_data = crate::tests::read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "今日は!";

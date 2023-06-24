@@ -191,7 +191,7 @@ mod tests {
     #[test]
     fn partials() {
         let font_data = crate::tests::read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "aoeuaoeuaoeuaoeaoeu";
@@ -225,7 +225,7 @@ mod tests {
     #[test]
     fn partial_newline() {
         let font_data = crate::tests::read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "aoeu\naoeu";
@@ -250,7 +250,7 @@ mod tests {
     #[test]
     fn peek_next() {
         let font_data = crate::tests::read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "\naoeu";
@@ -281,7 +281,7 @@ mod tests {
     #[test]
     fn peek_peek() {
         let font_data = crate::tests::read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "\naoeu";
@@ -306,7 +306,7 @@ mod tests {
     #[test]
     fn no_width() {
         let font_data = crate::tests::read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "T";

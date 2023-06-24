@@ -140,7 +140,7 @@ mod tests {
     #[test]
     fn no_glyphs() {
         let font_data = crate::tests::read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "";
@@ -157,7 +157,7 @@ mod tests {
     #[test]
     fn one_glyph() {
         let font_data = crate::tests::read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "a";
@@ -185,7 +185,7 @@ mod tests {
     #[test]
     fn newlines() {
         let font_data = crate::tests::read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "AB\nCD";
@@ -246,7 +246,7 @@ mod tests {
     #[test]
     fn test_y() {
         let font_data = crate::tests::read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "y̆";
@@ -276,7 +276,7 @@ mod tests {
     #[test]
     fn test_no_width() {
         let font_data = crate::tests::read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "T";

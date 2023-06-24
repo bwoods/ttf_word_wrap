@@ -9,7 +9,7 @@
 //!
 //! // Load a TrueType font using `ttf_parser`
 //! let font_data = std::fs::read("./test_fonts/Roboto-Regular.ttf").expect("TTF should exist");
-//! let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+//! let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
 //! let measure = TTFParserMeasure::new(&font_face);
 //!
 //! // Set up wrapping options, split on whitespace:
@@ -30,7 +30,7 @@
 //!
 //! // Load a TrueType font using `ttf_parser`
 //! let font_data = std::fs::read("./test_fonts/Roboto-Regular.ttf").expect("TTF should exist");
-//! let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+//! let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
 //! let measure = TTFParserMeasure::new(&font_face);
 //!
 //! // Set up wrapping options, split on whitespace:
@@ -92,7 +92,7 @@ mod tests {
     #[test]
     fn nomicon() {
         let font_data = read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
         let wsww = WhiteSpaceWordWrap::new(20000, &measure);
@@ -148,7 +148,7 @@ mod tests {
     #[test]
     fn nomicon_positions() {
         let font_data = read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
         let wsww = WhiteSpaceWordWrap::new(20000, &measure);
@@ -201,7 +201,7 @@ mod tests {
     #[test]
     fn no_width() {
         let font_data = read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
         let wsww = WhiteSpaceWordWrap::new(0, &measure);

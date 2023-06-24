@@ -7,7 +7,7 @@ use ttf_word_wrap::{CharPosition, TTFParserMeasure, WhiteSpaceWordWrap, WrapWith
 fuzz_target!(|s: String| {
     // Load a TrueType font using `ttf_parser`
     let font_data = std::fs::read("./../test_fonts/Roboto-Regular.ttf").expect("TTF should exist");
-    let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+    let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
     let measure = TTFParserMeasure::new(&font_face);
 
     // Set up wrapping options, split on whitespace:

@@ -134,7 +134,7 @@ mod tests {
     #[test]
     fn one_word() {
         let font_data = crate::tests::read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "word";
@@ -154,7 +154,7 @@ mod tests {
     #[test]
     fn sequential_newlines() {
         let font_data = crate::tests::read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "\r\n\n\r\n\n";
@@ -177,7 +177,7 @@ mod tests {
     #[test]
     fn begin_rn() {
         let font_data = crate::tests::read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "\r\na\n";
@@ -199,7 +199,7 @@ mod tests {
     #[test]
     fn newline_breaks_ws() {
         let font_data = crate::tests::read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "  \n  ";
@@ -221,7 +221,7 @@ mod tests {
     #[test]
     fn mixed() {
         let font_data = crate::tests::read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "at newline\n  some thing";
@@ -251,7 +251,7 @@ mod tests {
     #[test]
     fn test_y() {
         let font_data = crate::tests::read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "y̆";

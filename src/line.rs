@@ -96,7 +96,7 @@ mod tests {
     #[test]
     fn too_narrow() {
         let font_data = crate::tests::read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "1234567890";
@@ -122,7 +122,7 @@ mod tests {
     #[test]
     fn with_newlines() {
         let font_data = crate::tests::read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "123\n456\r\n7890";
@@ -148,7 +148,7 @@ mod tests {
     #[test]
     fn consecutive_newlines() {
         let font_data = crate::tests::read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "123\n\r\n456";
@@ -176,7 +176,7 @@ mod tests {
     #[test]
     fn starting_newlines() {
         let font_data = crate::tests::read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "\n1234";
@@ -199,7 +199,7 @@ mod tests {
     #[test]
     fn word_wrap_small_words() {
         let font_data = crate::tests::read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "caverns are not for the";
@@ -222,7 +222,7 @@ mod tests {
     #[test]
     fn no_width() {
         let font_data = crate::tests::read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let measure = TTFParserMeasure::new(&font_face);
 
         let text = "word";

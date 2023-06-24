@@ -53,7 +53,7 @@ mod tests {
     #[test]
     fn test_str() {
         let font_data = crate::tests::read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let dw = TTFParserMeasure::new(&font_face);
 
         let text = "aoeu";
@@ -64,7 +64,7 @@ mod tests {
     #[test]
     fn test_char() {
         let font_data = crate::tests::read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let dw = TTFParserMeasure::new(&font_face);
 
         let text = "a";
@@ -75,7 +75,7 @@ mod tests {
     #[test]
     fn caverns() {
         let font_data = crate::tests::read_font();
-        let font_face = Face::from_slice(&font_data, 0).expect("TTF should be valid");
+        let font_face = Face::parse(&font_data, 0).expect("TTF should be valid");
         let dw = TTFParserMeasure::new(&font_face);
 
         let text = "caverns are not for the";
